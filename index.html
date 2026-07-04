@@ -1,0 +1,1338 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Kartenkasse">
+<title>Kartenvorverkauf – ERP &amp; Kasse</title>
+<link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='20' fill='%232563eb'/%3E%3Ctext x='50' y='66' font-size='48' text-anchor='middle' fill='white' font-family='sans-serif'%3E%F0%9F%8E%AB%3C/text%3E%3C/svg%3E">
+<style>
+:root{
+  --blau:#2563eb; --blau-d:#1d4ed8; --gruen:#16a34a; --gruen-h:#dcfce7;
+  --rot:#dc2626; --rot-h:#fee2e2; --gelb:#d97706; --gelb-h:#fef3c7;
+  --grau:#64748b; --bg:#f1f5f9; --card:#ffffff; --rand:#e2e8f0; --text:#0f172a;
+}
+*{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
+html,body{margin:0; padding:0; background:var(--bg); color:var(--text);
+  font-family:-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif; font-size:16px;}
+button{font-family:inherit; font-size:1rem; border:none; border-radius:10px; cursor:pointer; padding:12px 18px; min-height:48px;}
+input,select,textarea{font-family:inherit; font-size:1rem; padding:10px 12px; border:1px solid var(--rand); border-radius:8px; background:#fff; color:var(--text); min-height:44px;}
+input:focus,select:focus{outline:2px solid var(--blau); border-color:var(--blau);}
+label{display:block; font-size:.85rem; font-weight:600; color:var(--grau); margin:10px 0 4px;}
+h1,h2,h3{margin:0 0 10px;}
+.btn-p{background:var(--blau); color:#fff; font-weight:600;}
+.btn-p:active{background:var(--blau-d);}
+.btn-g{background:var(--gruen); color:#fff; font-weight:600;}
+.btn-r{background:var(--rot); color:#fff; font-weight:600;}
+.btn-o{background:#fff; color:var(--text); border:1px solid var(--rand);}
+.btn-w{background:var(--gelb); color:#fff; font-weight:600;}
+button:disabled{opacity:.45; cursor:not-allowed;}
+.card{background:var(--card); border:1px solid var(--rand); border-radius:14px; padding:16px; margin-bottom:14px;}
+.muted{color:var(--grau); font-size:.9rem;}
+.row{display:flex; gap:10px; flex-wrap:wrap; align-items:center;}
+.grow{flex:1 1 auto;}
+table.tbl{width:100%; border-collapse:collapse; font-size:.92rem;}
+.tbl th{text-align:left; color:var(--grau); font-size:.8rem; text-transform:uppercase; padding:8px 6px; border-bottom:2px solid var(--rand);}
+.tbl td{padding:9px 6px; border-bottom:1px solid var(--rand); vertical-align:top;}
+.tbl tr.storno td{text-decoration:line-through; color:var(--grau);}
+.badge{display:inline-block; padding:3px 9px; border-radius:20px; font-size:.78rem; font-weight:600;}
+.b-gruen{background:var(--gruen-h); color:var(--gruen);}
+.b-rot{background:var(--rot-h); color:var(--rot);}
+.b-gelb{background:var(--gelb-h); color:var(--gelb);}
+.b-grau{background:#e2e8f0; color:var(--grau);}
+
+/* Kopf & Navigation */
+#kopf{position:sticky; top:0; z-index:50; background:var(--card); border-bottom:1px solid var(--rand);
+  padding:env(safe-area-inset-top) 14px 0; display:flex; align-items:center; gap:8px; flex-wrap:wrap;}
+#kopf .titel{font-weight:700; font-size:1.05rem; padding:12px 4px;}
+#netz{width:11px; height:11px; border-radius:50%; background:var(--gruen); display:inline-block;}
+#netz.aus{background:var(--rot);}
+#netz.lokal{background:var(--gelb);}
+nav{display:flex; gap:4px; margin-left:auto; overflow-x:auto;}
+nav button{background:none; border-radius:0; border-bottom:3px solid transparent; padding:14px 14px; min-height:52px; font-weight:600; color:var(--grau); white-space:nowrap;}
+nav button.akt{color:var(--blau); border-bottom-color:var(--blau);}
+main{max-width:1200px; margin:0 auto; padding:16px 14px 90px;}
+.view{display:none;}
+.view.akt{display:block;}
+#banner{max-width:1200px; margin:10px auto 0; padding:0 14px;}
+.hinweis{padding:12px 14px; border-radius:10px; margin-bottom:10px; font-size:.92rem;}
+.hw-gelb{background:var(--gelb-h); color:#7c4a03;}
+.hw-rot{background:var(--rot-h); color:#7f1d1d;}
+
+/* Kasse */
+#kasseWrap{display:grid; grid-template-columns:1fr 340px; gap:14px;}
+@media(max-width:820px){#kasseWrap{grid-template-columns:1fr;}}
+.ev-btn{padding:14px; border-radius:12px; border:2px solid var(--rand); background:#fff; text-align:left; width:100%; margin-bottom:8px;}
+.ev-btn.akt{border-color:var(--blau); background:#eff6ff;}
+.kat-grid{display:grid; grid-template-columns:repeat(auto-fill,minmax(150px,1fr)); gap:10px;}
+.kat-btn{padding:14px 10px; border-radius:12px; border:2px solid var(--rand); background:#fff; min-height:78px; text-align:center;}
+.kat-btn.akt{border-color:var(--blau); background:#eff6ff;}
+.kat-btn .kp{font-size:1.15rem; font-weight:700; display:block; margin-top:4px;}
+#warenkorb .pos{display:flex; justify-content:space-between; gap:8px; padding:8px 0; border-bottom:1px solid var(--rand); align-items:center;}
+#wkSumme{font-size:1.7rem; font-weight:800; text-align:right; margin:10px 0;}
+.mengen{display:flex; align-items:center; gap:6px;}
+.mengen button{width:42px; height:42px; min-height:42px; padding:0; font-size:1.3rem; background:#e2e8f0; border-radius:8px;}
+
+/* Sitzplan */
+#sitzplan{overflow-x:auto; padding:10px 0;}
+.sp-reihe{display:flex; gap:5px; margin-bottom:5px; align-items:center;}
+.sp-rl{width:34px; font-size:.75rem; color:var(--grau); text-align:right; padding-right:4px; flex:none;}
+.sitz{width:34px; height:34px; flex:none; border-radius:7px; border:none; padding:0; min-height:34px;
+  font-size:.65rem; color:#fff; background:var(--gruen); font-weight:600;}
+.sitz.verkauft{background:var(--rot); cursor:not-allowed;}
+.sitz.reserviert{background:var(--gelb);}
+.sitz.gewaehlt{background:var(--blau); outline:3px solid #93c5fd;}
+.sp-legende{display:flex; gap:14px; font-size:.8rem; color:var(--grau); margin:6px 0; flex-wrap:wrap;}
+.sp-legende i{width:14px; height:14px; border-radius:4px; display:inline-block; vertical-align:-2px; margin-right:4px;}
+#buehne{background:#334155; color:#fff; text-align:center; border-radius:8px; padding:6px; margin-bottom:12px; font-size:.8rem; letter-spacing:3px;}
+
+/* Zahlung */
+#rueckgeld{font-size:2.4rem; font-weight:800; color:var(--gruen); text-align:center; margin:8px 0;}
+#rueckgeld.neg{color:var(--rot);}
+.geld-schnell{display:grid; grid-template-columns:repeat(4,1fr); gap:8px; margin:10px 0;}
+.geld-schnell button{background:#e2e8f0; font-weight:700;}
+
+/* Dashboard */
+.dash-grid{display:grid; grid-template-columns:repeat(auto-fill,minmax(300px,1fr)); gap:14px;}
+.balken{height:14px; background:#e2e8f0; border-radius:7px; overflow:hidden; display:flex; margin:8px 0;}
+.balken i{display:block; height:100%;}
+.kpi{font-size:1.5rem; font-weight:800;}
+
+/* Modal */
+#modalBg{display:none; position:fixed; inset:0; background:rgba(15,23,42,.55); z-index:100; align-items:flex-start; justify-content:center; overflow-y:auto; padding:24px 10px;}
+#modalBg.offen{display:flex;}
+#modal{background:#fff; border-radius:16px; padding:20px; width:100%; max-width:560px; margin:auto 0;}
+#modal.breit{max-width:820px;}
+
+/* Login */
+#login{position:fixed; inset:0; background:var(--bg); z-index:200; display:flex; align-items:center; justify-content:center;}
+#login .card{width:320px; text-align:center;}
+#pinAnzeige{font-size:2rem; letter-spacing:10px; min-height:48px; margin:10px 0;}
+.pinpad{display:grid; grid-template-columns:repeat(3,1fr); gap:8px;}
+.pinpad button{font-size:1.4rem; min-height:58px; background:#e2e8f0; font-weight:700;}
+
+/* Druck */
+#printArea{display:none;}
+@media print{
+  body>*{display:none !important;}
+  #printArea{display:block !important; font-family:"Courier New",monospace; font-size:12px; width:72mm;}
+  #printArea .pz{text-align:center;}
+  #printArea hr{border:none; border-top:1px dashed #000;}
+  #printArea table{width:100%; border-collapse:collapse; font-size:12px;}
+  #printArea td{padding:1px 0; vertical-align:top;}
+  #printArea .re{text-align:right;}
+  #printArea .gross{font-size:15px; font-weight:bold;}
+}
+.sub-tabs{display:flex; gap:6px; margin-bottom:14px; flex-wrap:wrap;}
+.sub-tabs button{background:#e2e8f0; color:var(--grau); font-weight:600; padding:9px 16px; min-height:42px;}
+.sub-tabs button.akt{background:var(--blau); color:#fff;}
+.subview{display:none;} .subview.akt{display:block;}
+.zaehl-grid{display:grid; grid-template-columns:repeat(auto-fill,minmax(130px,1fr)); gap:8px;}
+.zaehl-grid label{margin:0 0 2px;}
+.zaehl-grid input{width:100%;}
+</style>
+</head>
+<body>
+
+<div id="login">
+  <div class="card">
+    <div style="font-size:2.5rem">🎫</div>
+    <h2 id="loginTitel">Kartenkasse</h2>
+    <p class="muted" id="loginText">PIN eingeben</p>
+    <div id="pinAnzeige"></div>
+    <div class="pinpad">
+      <button onclick="pinTaste('1')">1</button><button onclick="pinTaste('2')">2</button><button onclick="pinTaste('3')">3</button>
+      <button onclick="pinTaste('4')">4</button><button onclick="pinTaste('5')">5</button><button onclick="pinTaste('6')">6</button>
+      <button onclick="pinTaste('7')">7</button><button onclick="pinTaste('8')">8</button><button onclick="pinTaste('9')">9</button>
+      <button onclick="pinTaste('C')">C</button><button onclick="pinTaste('0')">0</button><button onclick="pinTaste('OK')">OK</button>
+    </div>
+    <p class="muted" style="margin-top:12px; font-size:.78rem">Standard-PIN: 1234 – bitte in den Einstellungen ändern.</p>
+  </div>
+</div>
+
+<header id="kopf">
+  <span class="titel">🎫 <span id="hVerein">Kartenkasse</span></span>
+  <span id="netz" title="Verbindungsstatus"></span><span id="netzText" class="muted" style="font-size:.78rem"></span>
+  <nav>
+    <button data-v="kasse" class="akt" onclick="zeige('kasse')">Kasse</button>
+    <button data-v="events" onclick="zeige('events')">Events</button>
+    <button data-v="res" onclick="zeige('res')">Reservierungen</button>
+    <button data-v="berichte" onclick="zeige('berichte')">Berichte</button>
+    <button data-v="einstellungen" onclick="zeige('einstellungen')">⚙︎</button>
+  </nav>
+</header>
+
+<div id="banner"></div>
+
+<main>
+  <section id="view-kasse" class="view akt">
+    <div id="kasseWrap">
+      <div>
+        <div class="card"><h3>1. Veranstaltung</h3><div id="posEvents"></div></div>
+        <div class="card" id="posKatCard"><h3>2. Karten wählen</h3><div id="posKats" class="kat-grid"></div>
+          <div id="posSitzbereich" style="display:none">
+            <p class="muted" style="margin:14px 0 4px">Kategorie antippen, dann Plätze im Saalplan wählen:</p>
+            <div id="buehne">B Ü H N E</div>
+            <div class="sp-legende">
+              <span><i style="background:var(--gruen)"></i>frei</span>
+              <span><i style="background:var(--blau)"></i>gewählt</span>
+              <span><i style="background:var(--gelb)"></i>reserviert</span>
+              <span><i style="background:var(--rot)"></i>verkauft</span>
+            </div>
+            <div id="sitzplan"></div>
+          </div>
+        </div>
+      </div>
+      <div>
+        <div class="card">
+          <h3>Warenkorb</h3>
+          <div id="warenkorb"></div>
+          <div id="wkSumme">0,00 €</div>
+          <label>Kunde (optional)</label>
+          <input id="wkKunde" placeholder="Name für Beleg/Kundenliste">
+          <div class="row" style="margin-top:12px">
+            <button class="btn-g grow" style="font-size:1.15rem; min-height:58px" onclick="zurKasse()">💶 Kassieren</button>
+          </div>
+          <div class="row" style="margin-top:8px">
+            <button class="btn-o grow" onclick="korbLeeren()">Leeren</button>
+            <button class="btn-o grow" onclick="resAusKorb()">Als Reservierung</button>
+          </div>
+        </div>
+        <div class="card">
+          <h3>Letzte Buchungen</h3>
+          <div id="posLetzte"></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="view-events" class="view">
+    <div class="row" style="margin-bottom:12px">
+      <h2 class="grow">Veranstaltungen</h2>
+      <button class="btn-p" onclick="eventDialog()">＋ Neues Event</button>
+    </div>
+    <div id="eventListe"></div>
+  </section>
+
+  <section id="view-res" class="view">
+    <div class="sub-tabs">
+      <button class="akt" data-s="resliste" onclick="subTab('res','resliste')">Reservierungen</button>
+      <button data-s="kunden" onclick="subTab('res','kunden')">Kunden</button>
+    </div>
+    <div id="res-resliste" class="subview akt">
+      <div class="row" style="margin-bottom:12px">
+        <h2 class="grow">Reservierungen</h2>
+        <button class="btn-p" onclick="resDialog()">＋ Neue Reservierung</button>
+      </div>
+      <div class="card"><div style="overflow-x:auto"><table class="tbl" id="resTabelle"></table></div></div>
+    </div>
+    <div id="res-kunden" class="subview">
+      <h2>Kunden</h2>
+      <input id="kundenSuche" placeholder="🔍 Name suchen…" oninput="renderKunden()" style="width:100%; margin-bottom:12px">
+      <div class="card"><div style="overflow-x:auto"><table class="tbl" id="kundenTabelle"></table></div></div>
+    </div>
+  </section>
+
+  <section id="view-berichte" class="view">
+    <div class="sub-tabs">
+      <button class="akt" data-s="dash" onclick="subTab('berichte','dash')">Dashboard</button>
+      <button data-s="verkaeufe" onclick="subTab('berichte','verkaeufe')">Verkaufsliste</button>
+      <button data-s="kassenbuch" onclick="subTab('berichte','kassenbuch')">Kassenbuch</button>
+      <button data-s="abschluss" onclick="subTab('berichte','abschluss')">Tagesabschluss</button>
+    </div>
+    <div id="berichte-dash" class="subview akt"><div id="dashInhalt" class="dash-grid"></div></div>
+    <div id="berichte-verkaeufe" class="subview">
+      <div class="card">
+        <div class="row">
+          <select id="fEvent" onchange="renderVerkaeufe()"><option value="">Alle Events</option></select>
+          <select id="fStatus" onchange="renderVerkaeufe()">
+            <option value="">Alle Status</option><option value="bezahlt">Bezahlt</option><option value="storniert">Storniert</option>
+          </select>
+          <select id="fZahlart" onchange="renderVerkaeufe()">
+            <option value="">Alle Zahlarten</option><option value="bar">Bar</option><option value="karte">Karte/Überweisung</option>
+          </select>
+          <input type="date" id="fDatum" onchange="renderVerkaeufe()">
+          <button class="btn-o" onclick="csvVerkaeufe()">⬇ CSV-Export</button>
+        </div>
+      </div>
+      <div class="card"><div style="overflow-x:auto"><table class="tbl" id="verkaufTabelle"></table></div></div>
+    </div>
+    <div id="berichte-kassenbuch" class="subview">
+      <div class="row" style="margin-bottom:12px">
+        <h2 class="grow">Kassenbuch (Bar)</h2>
+        <button class="btn-o" onclick="kasseBewegung('einlage')">＋ Einlage</button>
+        <button class="btn-o" onclick="kasseBewegung('entnahme')">－ Entnahme</button>
+        <button class="btn-o" onclick="csvKassenbuch()">⬇ CSV-Export</button>
+      </div>
+      <div class="card"><div style="overflow-x:auto"><table class="tbl" id="kbTabelle"></table></div></div>
+    </div>
+    <div id="berichte-abschluss" class="subview"><div id="abschlussInhalt"></div></div>
+  </section>
+
+  <section id="view-einstellungen" class="view">
+    <h2>Einstellungen</h2>
+    <div class="card">
+      <h3>Verein</h3>
+      <label>Vereinsname (erscheint auf Belegen)</label>
+      <input id="setVerein" style="width:100%">
+      <label>Beleg-Fußzeile (optional)</label>
+      <input id="setFusszeile" style="width:100%" placeholder="z. B. Danke für Ihren Besuch!">
+      <div style="margin-top:10px"><button class="btn-p" onclick="setVereinSpeichern()">Speichern</button></div>
+    </div>
+    <div class="card">
+      <h3>PIN ändern</h3>
+      <div class="row">
+        <input id="setPinNeu" type="password" inputmode="numeric" placeholder="Neue PIN (4–8 Ziffern)">
+        <button class="btn-p" onclick="pinAendern()">PIN speichern</button>
+      </div>
+    </div>
+    <div class="card">
+      <h3>Cloud-Synchronisation (Supabase)</h3>
+      <p class="muted">Ohne Cloud läuft die App im <b>Lokalbetrieb</b> (Daten nur auf diesem Gerät). Für PC + iPad mit gemeinsamem Datenstand: Supabase-Projekt laut Anleitung anlegen und hier eintragen.</p>
+      <label>Supabase-URL</label>
+      <input id="setSupaUrl" style="width:100%" placeholder="https://xxxx.supabase.co">
+      <label>Supabase anon-Key</label>
+      <input id="setSupaKey" style="width:100%" placeholder="eyJ…">
+      <div class="row" style="margin-top:10px">
+        <button class="btn-p" onclick="supaVerbinden()">Speichern &amp; verbinden</button>
+        <span id="supaStatus" class="muted"></span>
+      </div>
+    </div>
+    <div class="card">
+      <h3>Datensicherung</h3>
+      <p class="muted" id="backupInfo"></p>
+      <div class="row">
+        <button class="btn-p" onclick="backupExport()">⬇ Backup speichern (JSON)</button>
+        <button class="btn-o" onclick="document.getElementById('importDatei').click()">⬆ Backup einspielen</button>
+        <input type="file" id="importDatei" accept=".json" style="display:none" onchange="backupImport(this)">
+      </div>
+    </div>
+    <div class="card">
+      <h3>Beispieldaten</h3>
+      <p class="muted">Die App enthält Beispieldaten zum Ausprobieren (Events V-Beispiel …).</p>
+      <button class="btn-r" onclick="beispieldatenLoeschen()">🗑 Beispieldaten löschen – Echtbetrieb starten</button>
+    </div>
+    <div class="card">
+      <h3>Info</h3>
+      <p class="muted">Dieses System ist eine <b>interne Vereinsverwaltung</b> für den Kartenvorverkauf. Es ist <b>keine zertifizierte Registrierkasse</b> im Sinne der österreichischen RKSV. Version 1.0</p>
+    </div>
+  </section>
+</main>
+
+<div id="modalBg"><div id="modal"></div></div>
+<div id="printArea"></div>
+
+<script>
+'use strict';
+/* ======================= Grunddaten & Hilfen ======================= */
+const LS_KEY='kvv_erp_v1';
+let state=null;
+const uid=()=> (crypto.randomUUID ? crypto.randomUUID() : 'id-'+Date.now()+'-'+Math.random().toString(36).slice(2));
+const nowISO=()=> new Date().toISOString();
+const esc=s=> String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const fmtEur=n=> (Number(n)||0).toLocaleString('de-AT',{minimumFractionDigits:2,maximumFractionDigits:2})+' €';
+const fmtDat=d=>{ if(!d) return ''; const t=new Date(d); return isNaN(t)?'':t.toLocaleDateString('de-AT',{day:'2-digit',month:'2-digit',year:'numeric'}); };
+const fmtZeit=d=>{ const t=new Date(d); return t.toLocaleDateString('de-AT',{day:'2-digit',month:'2-digit',year:'numeric'})+' '+t.toLocaleTimeString('de-AT',{hour:'2-digit',minute:'2-digit'}); };
+const num=v=>{ const n=parseFloat(String(v).replace(',','.')); return isNaN(n)?0:n; };
+
+function leererState(){
+  return {
+    events:[], kategorien:[], buchungen:[], reservierungen:[], kasse:[], abschluesse:[],
+    einstellungen:{verein:'Mein Verein', fusszeile:'Vielen Dank für Ihren Besuch!', pin:'1234',
+      supaUrl:'', supaKey:'', beispiel:true, letztesBackup:null},
+    outbox:[], lastPull:null
+  };
+}
+function laden(){
+  try{ const raw=localStorage.getItem(LS_KEY); if(raw){ state=Object.assign(leererState(),JSON.parse(raw)); return; } }catch(e){}
+  state=leererState(); beispieldatenAnlegen();
+}
+let saveT=null;
+function speichern(){
+  clearTimeout(saveT);
+  saveT=setTimeout(()=>{ try{ localStorage.setItem(LS_KEY,JSON.stringify(state)); }catch(e){ console.error('Speichern fehlgeschlagen',e); } },80);
+}
+
+/* Zentrale Mutation: lokal anwenden + in Cloud-Warteschlange */
+const SYNC_TABELLEN=['events','kategorien','buchungen','reservierungen','kasse','abschluesse'];
+function upsertLokal(tabelle,zeile){
+  zeile.updated_at=nowISO();
+  const arr=state[tabelle];
+  const i=arr.findIndex(r=>r.id===zeile.id);
+  if(i>=0) arr[i]=zeile; else arr.push(zeile);
+  state.outbox.push({tabelle, zeile:JSON.parse(JSON.stringify(zeile))});
+  speichern();
+  syncPush();
+}
+
+/* ======================= Supabase-Sync ======================= */
+let syncLaeuft=false, pollTimer=null;
+const supaAktiv=()=> !!(state.einstellungen.supaUrl && state.einstellungen.supaKey);
+function supaFetch(pfad,opts={}){
+  const u=state.einstellungen.supaUrl.replace(/\/$/,'')+'/rest/v1/'+pfad;
+  const h=Object.assign({
+    'apikey':state.einstellungen.supaKey,
+    'Authorization':'Bearer '+state.einstellungen.supaKey,
+    'Content-Type':'application/json'
+  },opts.headers||{});
+  return fetch(u,Object.assign({},opts,{headers:h}));
+}
+function netzStatus(){
+  const el=document.getElementById('netz'), tx=document.getElementById('netzText');
+  if(!supaAktiv()){ el.className='lokal'; tx.textContent='Lokalbetrieb'; return; }
+  if(!navigator.onLine || syncFehler){ el.className='aus'; tx.textContent='offline'+(state.outbox.length?` (${state.outbox.length} wartend)`:''); }
+  else { el.className=''; tx.textContent='synchron'+(state.outbox.length?` (${state.outbox.length}…)`:''); }
+}
+let syncFehler=false;
+async function syncPush(){
+  if(!supaAktiv()||syncLaeuft||!state.outbox.length){ netzStatus(); return; }
+  syncLaeuft=true;
+  try{
+    while(state.outbox.length){
+      const it=state.outbox[0];
+      const r=await supaFetch(it.tabelle,{method:'POST',
+        headers:{'Prefer':'resolution=merge-duplicates'},
+        body:JSON.stringify([zeileFuerCloud(it.tabelle,it.zeile)])});
+      if(!r.ok) throw new Error('HTTP '+r.status+' bei '+it.tabelle);
+      state.outbox.shift(); speichern();
+    }
+    syncFehler=false;
+  }catch(e){ syncFehler=true; console.warn('Sync-Push:',e.message); }
+  syncLaeuft=false; netzStatus();
+}
+function zeileFuerCloud(tabelle,z){
+  const k=JSON.parse(JSON.stringify(z));
+  // Arrays/Objekte gehen als jsonb-Spalten durch – Struktur passt 1:1 zum Schema.
+  return k;
+}
+async function syncPull(){
+  if(!supaAktiv()||!navigator.onLine) return;
+  try{
+    const seit=state.lastPull||'1970-01-01T00:00:00Z';
+    const neu=nowISO();
+    let geaendert=0;
+    for(const t of SYNC_TABELLEN){
+      const r=await supaFetch(`${t}?select=*&updated_at=gt.${encodeURIComponent(seit)}`);
+      if(!r.ok) throw new Error('HTTP '+r.status);
+      const rows=await r.json();
+      for(const row of rows){
+        const arr=state[t], i=arr.findIndex(x=>x.id===row.id);
+        if(i>=0){ if(!arr[i].updated_at || row.updated_at>arr[i].updated_at){ arr[i]=row; geaendert++; } }
+        else { arr.push(row); geaendert++; }
+      }
+    }
+    state.lastPull=neu; syncFehler=false; speichern();
+    if(geaendert) renderAlles();
+  }catch(e){ syncFehler=true; console.warn('Sync-Pull:',e.message); }
+  netzStatus();
+}
+async function erstSync(){
+  // Beim ersten Verbinden: kompletten lokalen Bestand hochladen, dann alles ziehen.
+  for(const t of SYNC_TABELLEN){ for(const z of state[t]) state.outbox.push({tabelle:t,zeile:JSON.parse(JSON.stringify(z))}); }
+  state.lastPull=null; speichern();
+  await syncPush(); await syncPull();
+}
+/* Serverseitige Sitzplatz-Sperre: Zeilen in "seats" einfügen; 409 = Konflikt */
+async function seatsReservieren(eventId,plaetze,refId,art){
+  if(!plaetze.length) return {ok:true};
+  if(!supaAktiv()||!navigator.onLine) return {ok:true, offline:true};
+  try{
+    const body=plaetze.map(p=>({id:uid(), event_id:eventId, platz:p, ref_id:refId, art, updated_at:nowISO()}));
+    const r=await supaFetch('seats',{method:'POST',body:JSON.stringify(body)});
+    if(r.status===409) return {ok:false, konflikt:true};
+    if(!r.ok) return {ok:true, offline:true};
+    return {ok:true};
+  }catch(e){ return {ok:true, offline:true}; }
+}
+async function seatsFreigeben(refId){
+  if(!supaAktiv()||!navigator.onLine){ state.outbox.push({tabelle:'__seatsDel', zeile:{ref_id:refId}}); speichern(); return; }
+  try{ await supaFetch('seats?ref_id=eq.'+refId,{method:'DELETE'}); }catch(e){}
+}
+// __seatsDel-Einträge in der Outbox gesondert behandeln:
+const _origPush=syncPush;
+async function syncPushMitSeats(){
+  if(!supaAktiv()||!navigator.onLine){ netzStatus(); return; }
+  const del=state.outbox.filter(x=>x.tabelle==='__seatsDel');
+  for(const d of del){
+    try{ await supaFetch('seats?ref_id=eq.'+d.zeile.ref_id,{method:'DELETE'});
+      state.outbox=state.outbox.filter(x=>x!==d); speichern(); }catch(e){ break; }
+  }
+  await _origPush();
+}
+syncPush=syncPushMitSeats;
+
+function pollingStart(){
+  clearInterval(pollTimer);
+  pollTimer=setInterval(()=>{ syncPush(); syncPull(); },8000);
+  window.addEventListener('online',()=>{ syncPush(); syncPull(); });
+  window.addEventListener('offline',netzStatus);
+  document.addEventListener('visibilitychange',()=>{ if(!document.hidden){ syncPush(); syncPull(); } });
+}
+
+/* ======================= Login / PIN ======================= */
+let pinPuffer='';
+function pinTaste(t){
+  if(t==='C'){ pinPuffer=''; }
+  else if(t==='←'){ pinPuffer=pinPuffer.slice(0,-1); }
+  else if(t==='OK'){
+    const richtig=state.einstellungen.pin||'1234';
+    if(pinPuffer===richtig){ document.getElementById('login').style.display='none'; }
+    else { document.getElementById('loginText').textContent='Falsche PIN – bitte erneut.'; }
+    pinPuffer='';
+  }
+  else if(pinPuffer.length<8){
+    pinPuffer+=t;
+    // Komfort: bei erreichter PIN-Länge automatisch prüfen
+    const richtig=state.einstellungen.pin||'1234';
+    if(pinPuffer.length===richtig.length){ pinTaste('OK'); return; }
+  }
+  document.getElementById('pinAnzeige').textContent='•'.repeat(pinPuffer.length);
+}
+/* PIN auch per Tastatur (PC): Ziffern, Enter, Backspace, Esc */
+document.addEventListener('keydown',e=>{
+  if(document.getElementById('login').style.display==='none') return;
+  if(/^[0-9]$/.test(e.key)) pinTaste(e.key);
+  else if(e.key==='Enter') pinTaste('OK');
+  else if(e.key==='Backspace') pinTaste('←');
+  else if(e.key==='Escape') pinTaste('C');
+});
+function pinAendern(){
+  const p=document.getElementById('setPinNeu').value.trim();
+  if(!/^\d{4,8}$/.test(p)){ alert('Bitte 4–8 Ziffern.'); return; }
+  state.einstellungen.pin=p; speichern();
+  document.getElementById('setPinNeu').value='';
+  alert('PIN geändert.');
+}
+
+/* ======================= Navigation ======================= */
+function zeige(v){
+  document.querySelectorAll('.view').forEach(e=>e.classList.remove('akt'));
+  document.getElementById('view-'+v).classList.add('akt');
+  document.querySelectorAll('nav button').forEach(b=>b.classList.toggle('akt',b.dataset.v===v));
+  renderAlles();
+}
+function subTab(bereich,s){
+  document.querySelectorAll('#view-'+bereich+' .subview').forEach(e=>e.classList.remove('akt'));
+  document.getElementById(bereich+'-'+s).classList.add('akt');
+  document.querySelectorAll('#view-'+bereich+' .sub-tabs button').forEach(b=>b.classList.toggle('akt',b.dataset.s===s));
+  renderAlles();
+}
+function modal(html,breit){
+  const m=document.getElementById('modal');
+  m.className=breit?'breit':'';
+  m.innerHTML=html;
+  document.getElementById('modalBg').classList.add('offen');
+}
+function modalZu(){ document.getElementById('modalBg').classList.remove('offen'); }
+document.getElementById('modalBg').addEventListener('click',e=>{ if(e.target.id==='modalBg') modalZu(); });
+
+/* ======================= Abgeleitete Daten ======================= */
+const aktiveB=()=> state.buchungen.filter(b=>b.status==='bezahlt');
+const offeneR=()=> state.reservierungen.filter(r=>r.status==='offen');
+function eventVon(id){ return state.events.find(e=>e.id===id); }
+function katsVon(eventId){ return state.kategorien.filter(k=>k.event_id===eventId && !k.geloescht); }
+/* Belegte Sitzplätze eines Events: {"R3-P5":{status,ref,name}} */
+function sitzBelegung(eventId){
+  const m={};
+  for(const b of aktiveB()) if(b.event_id===eventId)
+    for(const p of b.positionen) for(const s of (p.seats||[])) m[s]={status:'verkauft',ref:b.id};
+  for(const r of offeneR()) if(r.event_id===eventId)
+    for(const s of (r.seats||[])) m[s]={status:'reserviert',ref:r.id,name:r.name};
+  return m;
+}
+/* Kontingent-Zählung (freier Bereich) */
+function freiZaehlung(ev){
+  let verkauft=0,reserviert=0,sitzV=0,sitzR=0;
+  for(const b of aktiveB()) if(b.event_id===ev.id)
+    for(const p of b.positionen){ const st=(p.seats||[]).length; sitzV+=st; verkauft+=p.menge-st; }
+  for(const r of offeneR()) if(r.event_id===ev.id){ const st=(r.seats||[]).length; sitzR+=st; reserviert+=r.menge-st; }
+  const gesamtSitze=(ev.modus!=='frei')?(ev.reihen*ev.ppr):0;
+  const kontFrei=(ev.modus!=='sitzplan')?(ev.kontingent||0):0;
+  return {verkauft,reserviert, frei:Math.max(0,kontFrei-verkauft-reserviert), kontFrei,
+          sitzV,sitzR, sitzFrei:Math.max(0,gesamtSitze-sitzV-sitzR), gesamtSitze};
+}
+function belegNrNeu(){
+  let max=0; for(const b of state.buchungen){ const n=parseInt(b.belegnr,10); if(n>max) max=n; }
+  return max+1;
+}
+function renderAlles(){
+  document.getElementById('hVerein').textContent=state.einstellungen.verein||'Kartenkasse';
+  netzStatus(); bannerRender();
+  renderKasse(); renderEvents(); renderRes(); renderKunden();
+  renderDash(); renderVerkaeufe(); renderKassenbuch(); renderAbschluss(); renderEinstellungen();
+}
+function bannerRender(){
+  const b=document.getElementById('banner'); let h='';
+  const lb=state.einstellungen.letztesBackup;
+  if(!lb || (Date.now()-new Date(lb).getTime())>7*86400000)
+    h+='<div class="hinweis hw-gelb">💾 Das letzte Backup ist älter als 7 Tage (oder es gibt noch keines). In den Einstellungen „Backup speichern" klicken.</div>';
+  if(supaAktiv() && (!navigator.onLine||syncFehler))
+    h+=`<div class="hinweis hw-rot">⚠️ Keine Cloud-Verbindung – Buchungen werden lokal zwischengespeichert (${state.outbox.length} wartend) und bei Wiederverbindung übertragen.</div>`;
+  const konflikte=sitzKonflikte();
+  if(konflikte.length)
+    h+=`<div class="hinweis hw-rot">🚨 <b>Sitzplatz-Konflikt erkannt</b> (z. B. durch Offline-Buchung an zwei Geräten): ${konflikte.map(esc).join(' · ')}. Bitte eine der betroffenen Buchungen stornieren und umbuchen.</div>`;
+  b.innerHTML=h;
+}
+/* Doppelbelegungen erkennen (kann nur durch Offline-Buchungen entstehen) */
+function sitzKonflikte(){
+  const meldungen=[];
+  for(const ev of state.events.filter(e=>!e.geloescht && e.modus!=='frei')){
+    const zaehler={};
+    for(const b of aktiveB()) if(b.event_id===ev.id)
+      for(const p of b.positionen) for(const s of (p.seats||[])) (zaehler[s]??=[]).push('Beleg #'+b.belegnr);
+    for(const r of offeneR()) if(r.event_id===ev.id)
+      for(const s of (r.seats||[])) (zaehler[s]??=[]).push('Res. '+r.name);
+    for(const [s,wer] of Object.entries(zaehler))
+      if(wer.length>1) meldungen.push(`${ev.name} ${s} (${wer.join(' + ')})`);
+  }
+  return meldungen;
+}
+/* ======================= KASSE (POS) ======================= */
+let pos={eventId:null, katId:null, cart:[]};   // cart: [{katId,name,preis,menge,seats:[]}]
+
+function renderKasse(){
+  const wrap=document.getElementById('posEvents');
+  const evs=state.events.filter(e=>!e.archiviert && !e.geloescht).sort((a,b)=>(a.datum||'').localeCompare(b.datum||''));
+  if(!evs.length){ wrap.innerHTML='<p class="muted">Noch keine Veranstaltung angelegt – Reiter „Events".</p>'; }
+  else wrap.innerHTML=evs.map(e=>{
+    const z=freiZaehlung(e);
+    const frei=(e.modus==='frei')?`${z.frei} frei`:(e.modus==='sitzplan')?`${z.sitzFrei} Plätze frei`:`${z.sitzFrei} Sitze + ${z.frei} Stehpl. frei`;
+    return `<button class="ev-btn ${pos.eventId===e.id?'akt':''}" onclick="posEvent('${e.id}')">
+      <b>${esc(e.name)}</b><br><span class="muted">${fmtDat(e.datum)} ${esc(e.uhrzeit||'')} · ${esc(e.ort||'')} · <b>${frei}</b></span></button>`;
+  }).join('');
+  renderPosKats(); renderSitzplan(); renderKorb(); renderPosLetzte();
+}
+function posEvent(id){ if(pos.eventId!==id){ pos={eventId:id,katId:null,cart:[]}; } renderKasse(); }
+function renderPosKats(){
+  const el=document.getElementById('posKats');
+  const ev=eventVon(pos.eventId);
+  if(!ev){ el.innerHTML='<p class="muted">Zuerst Veranstaltung wählen.</p>'; document.getElementById('posSitzbereich').style.display='none'; return; }
+  const kats=katsVon(ev.id);
+  el.innerHTML=(kats.map(k=>`<button class="kat-btn ${pos.katId===k.id?'akt':''}" onclick="posKat('${k.id}')">
+      ${esc(k.name)}<span class="kp">${fmtEur(k.preis)}</span></button>`).join('')
+    ||'<p class="muted">Für dieses Event sind keine Kategorien angelegt.</p>')
+    +(ev.modus==='beides'?`<button class="kat-btn" onclick="posStehplatz()">＋ Stehplatz /<br>ohne Sitzplatz<span class="kp">gewählte Kat.</span></button>`:'');
+  document.getElementById('posSitzbereich').style.display=(ev.modus!=='frei')?'block':'none';
+}
+function posKat(id){
+  const ev=eventVon(pos.eventId); const k=state.kategorien.find(x=>x.id===id);
+  if(!ev||!k) return;
+  pos.katId=id;
+  if(ev.modus==='frei') korbPlus(k,null);
+  renderPosKats(); renderSitzplan();
+}
+function posStehplatz(){
+  const k=state.kategorien.find(x=>x.id===pos.katId);
+  if(!k){ alert('Bitte zuerst eine Kartenkategorie antippen.'); return; }
+  korbPlus(k,null);
+}
+function renderSitzplan(){
+  const ev=eventVon(pos.eventId);
+  const el=document.getElementById('sitzplan');
+  if(!ev||ev.modus==='frei'){ el.innerHTML=''; return; }
+  const bel=sitzBelegung(ev.id);
+  const gewaehlt=new Set(); pos.cart.forEach(p=>(p.seats||[]).forEach(s=>gewaehlt.add(s)));
+  let h='';
+  for(let r=1;r<=ev.reihen;r++){
+    h+=`<div class="sp-reihe"><span class="sp-rl">R${r}</span>`;
+    for(let p=1;p<=ev.ppr;p++){
+      const key=`R${r}-P${p}`;
+      const b=bel[key];
+      let cls='sitz', dis='';
+      if(gewaehlt.has(key)) cls+=' gewaehlt';
+      else if(b&&b.status==='verkauft'){ cls+=' verkauft'; dis='disabled'; }
+      else if(b&&b.status==='reserviert'){ cls+=' reserviert'; dis='disabled'; }
+      h+=`<button class="${cls}" ${dis} title="${key}${b&&b.name?' – '+esc(b.name):''}" onclick="sitzKlick('${key}')">${p}</button>`;
+    }
+    h+='</div>';
+  }
+  el.innerHTML=h;
+}
+function sitzKlick(key){
+  const ev=eventVon(pos.eventId); if(!ev) return;
+  // Abwählen, falls schon im Korb
+  for(const p of pos.cart){
+    const i=(p.seats||[]).indexOf(key);
+    if(i>=0){ p.seats.splice(i,1); p.menge--; if(p.menge<=0) pos.cart=pos.cart.filter(x=>x!==p); renderKasse(); return; }
+  }
+  const k=state.kategorien.find(x=>x.id===pos.katId);
+  if(!k){ alert('Bitte zuerst eine Kartenkategorie antippen.'); return; }
+  let zeile=pos.cart.find(p=>p.katId===k.id && p.seats);
+  if(!zeile){ zeile={katId:k.id,name:k.name,preis:k.preis,menge:0,seats:[]}; pos.cart.push(zeile); }
+  if(!zeile.seats) zeile.seats=[];
+  zeile.seats.push(key); zeile.menge++;
+  renderKasse();
+}
+function korbPlus(k,seats){
+  const ev=eventVon(pos.eventId);
+  const z=freiZaehlung(ev);
+  if(!seats){
+    const imKorb=pos.cart.filter(p=>!(p.seats&&p.seats.length)).reduce((s,p)=>s+p.menge,0);
+    if(imKorb+1>z.frei){ alert('Kontingent erschöpft – keine freien Karten mehr verfügbar.'); return; }
+  }
+  let zeile=pos.cart.find(p=>p.katId===k.id && !(p.seats&&p.seats.length));
+  if(!zeile){ zeile={katId:k.id,name:k.name,preis:k.preis,menge:0,seats:[]}; pos.cart.push(zeile); }
+  zeile.menge++;
+  renderKorb();
+}
+function korbMenge(idx,delta){
+  const p=pos.cart[idx]; if(!p) return;
+  if(p.seats&&p.seats.length){ alert('Sitzplatz-Positionen bitte direkt im Saalplan an-/abwählen.'); return; }
+  if(delta>0){ const ev=eventVon(pos.eventId), z=freiZaehlung(ev);
+    const imKorb=pos.cart.filter(x=>!(x.seats&&x.seats.length)).reduce((s,x)=>s+x.menge,0);
+    if(imKorb+1>z.frei){ alert('Kontingent erschöpft.'); return; } }
+  p.menge+=delta;
+  if(p.menge<=0) pos.cart.splice(idx,1);
+  renderKorb();
+}
+const korbSumme=()=> pos.cart.reduce((s,p)=>s+p.preis*p.menge,0);
+function renderKorb(){
+  const el=document.getElementById('warenkorb');
+  const ev=eventVon(pos.eventId);
+  el.innerHTML=pos.cart.length? pos.cart.map((p,i)=>`
+    <div class="pos"><div><b>${p.menge}× ${esc(p.name)}</b>
+      ${p.seats&&p.seats.length?`<br><span class="muted">${p.seats.join(', ')}</span>`:''}
+      </div>
+      <div class="mengen">
+        ${p.seats&&p.seats.length?'':`<button onclick="korbMenge(${i},-1)">−</button><button onclick="korbMenge(${i},1)">＋</button>`}
+        <b style="min-width:74px; text-align:right">${fmtEur(p.preis*p.menge)}</b>
+      </div></div>`).join('')
+    : `<p class="muted">${ev?'Karten antippen…':'Zuerst Veranstaltung wählen.'}</p>`;
+  document.getElementById('wkSumme').textContent=fmtEur(korbSumme());
+}
+function korbLeeren(){ pos.cart=[]; pos.katId=null; renderKasse(); }
+
+/* --------- Zahlung --------- */
+function zurKasse(){
+  if(!pos.cart.length){ alert('Der Warenkorb ist leer.'); return; }
+  const s=korbSumme();
+  modal(`<h2>Kassieren – ${fmtEur(s)}</h2>
+    <label>Zahlungsart</label>
+    <div class="row">
+      <button class="btn-p grow" id="zBar" onclick="zahlartWahl('bar')">💶 Bar</button>
+      <button class="btn-o grow" id="zKarte" onclick="zahlartWahl('karte')">💳 Karte/Überweisung</button>
+    </div>
+    <div id="barBereich">
+      <label>Gegeben</label>
+      <input id="gegeben" inputmode="decimal" style="width:100%; font-size:1.4rem; text-align:right" oninput="rueckgeldRechnen()" placeholder="0,00">
+      <div class="geld-schnell">
+        ${[5,10,20,50].map(v=>`<button onclick="gegebenPlus(${v})">${v} €</button>`).join('')}
+        <button onclick="gegebenExakt()">Passend</button>
+        <button onclick="gegebenPlus(100)">100 €</button>
+        <button onclick="gegebenPlus(200)">200 €</button>
+        <button onclick="document.getElementById('gegeben').value=''; rueckgeldRechnen()">C</button>
+      </div>
+      <div class="muted" style="text-align:center">Rückgeld</div>
+      <div id="rueckgeld">–</div>
+    </div>
+    <div class="row" style="margin-top:14px">
+      <button class="btn-o" onclick="modalZu()">Abbrechen</button>
+      <button class="btn-g grow" style="font-size:1.1rem" onclick="verkaufAbschliessen()">✓ Buchung abschließen</button>
+    </div>`);
+  zahlartWahl('bar');
+}
+let zahlart='bar';
+function zahlartWahl(z){
+  zahlart=z;
+  document.getElementById('zBar').className=z==='bar'?'btn-p grow':'btn-o grow';
+  document.getElementById('zKarte').className=z==='karte'?'btn-p grow':'btn-o grow';
+  document.getElementById('barBereich').style.display=z==='bar'?'block':'none';
+}
+function gegebenPlus(v){ const el=document.getElementById('gegeben'); el.value=(num(el.value)+v).toFixed(2).replace('.',','); rueckgeldRechnen(); }
+function gegebenExakt(){ document.getElementById('gegeben').value=korbSumme().toFixed(2).replace('.',','); rueckgeldRechnen(); }
+function rueckgeldRechnen(){
+  const g=num(document.getElementById('gegeben').value), s=korbSumme();
+  const el=document.getElementById('rueckgeld');
+  if(!g){ el.textContent='–'; el.className=''; return; }
+  const r=g-s;
+  el.textContent=fmtEur(r);
+  el.className=r<0?'neg':'';
+}
+async function verkaufAbschliessen(){
+  const s=korbSumme();
+  let gegeben=null, rueck=null;
+  if(zahlart==='bar'){
+    gegeben=num(document.getElementById('gegeben').value)||s;
+    if(gegeben<s){ alert('Gegebener Betrag ist zu niedrig.'); return; }
+    rueck=gegeben-s;
+  }
+  const alleSeats=pos.cart.flatMap(p=>p.seats||[]);
+  const id=uid();
+  // Serverseitige Sperre der Sitzplätze (Doppelverkaufs-Schutz über Geräte hinweg)
+  const sperre=await seatsReservieren(pos.eventId,alleSeats,id,'verkauf');
+  if(!sperre.ok){
+    alert('⚠️ Mindestens ein gewählter Platz wurde soeben am anderen Gerät verkauft oder reserviert. Der Saalplan wird aktualisiert – bitte Plätze neu wählen.');
+    await syncPull(); pos.cart=pos.cart.filter(p=>!(p.seats&&p.seats.length)); renderKasse(); modalZu(); return;
+  }
+  const b={id, belegnr:belegNrNeu(), event_id:pos.eventId, status:'bezahlt', zahlungsart:zahlart,
+    summe:s, gegeben, rueckgeld:rueck, kunde:document.getElementById('wkKunde').value.trim()||null,
+    storno_grund:null, ts:nowISO(),
+    positionen:pos.cart.map(p=>({katId:p.katId,name:p.name,preis:p.preis,menge:p.menge,seats:p.seats||[]}))};
+  upsertLokal('buchungen',b);
+  if(sperre.offline && alleSeats.length){ /* Plätze werden beim nächsten Sync über die Buchung sichtbar; Konflikt würde beim Pull auffallen */ }
+  modalZu();
+  pos.cart=[]; pos.katId=null; document.getElementById('wkKunde').value='';
+  renderAlles();
+  belegAnzeigen(b);
+}
+function belegAnzeigen(b){
+  const ev=eventVon(b.event_id);
+  modal(`<h2>✓ Gebucht – Beleg Nr. ${b.belegnr}</h2>
+    <p>${esc(ev?ev.name:'')} · ${fmtEur(b.summe)} · ${b.zahlungsart==='bar'?'Bar':'Karte/Überweisung'}
+    ${b.rueckgeld!=null?`<br><b style="font-size:1.3rem">Rückgeld: ${fmtEur(b.rueckgeld)}</b>`:''}</p>
+    <div class="row">
+      <button class="btn-p grow" onclick="belegDrucken('${b.id}')">🖨 Beleg drucken</button>
+      <button class="btn-o grow" onclick="modalZu()">Fertig</button>
+    </div>`);
+}
+function belegDrucken(id){
+  const b=state.buchungen.find(x=>x.id===id); if(!b) return;
+  const ev=eventVon(b.event_id);
+  const e=state.einstellungen;
+  document.getElementById('printArea').innerHTML=`
+    <div class="pz gross">${esc(e.verein)}</div>
+    <div class="pz">Kassenbeleg Nr. ${b.belegnr}</div>
+    <div class="pz">${fmtZeit(b.ts)}</div><hr>
+    <div>${esc(ev?ev.name:'')} – ${fmtDat(ev?ev.datum:'')}</div><hr>
+    <table>${b.positionen.map(p=>`
+      <tr><td>${p.menge}× ${esc(p.name)}</td><td class="re">${fmtEur(p.preis*p.menge)}</td></tr>
+      ${p.seats&&p.seats.length?`<tr><td colspan="2">&nbsp;&nbsp;Plätze: ${p.seats.join(', ')}</td></tr>`:''}`).join('')}
+    </table><hr>
+    <table>
+      <tr class="gross"><td>SUMME</td><td class="re">${fmtEur(b.summe)}</td></tr>
+      <tr><td>Zahlung</td><td class="re">${b.zahlungsart==='bar'?'Bar':'Karte/Überw.'}</td></tr>
+      ${b.gegeben!=null?`<tr><td>Gegeben</td><td class="re">${fmtEur(b.gegeben)}</td></tr>
+      <tr><td>Rückgeld</td><td class="re">${fmtEur(b.rueckgeld)}</td></tr>`:''}
+    </table><hr>
+    <div class="pz">${esc(e.fusszeile||'')}</div>
+    <div class="pz" style="font-size:9px">Interner Beleg – keine Registrierkasse (RKSV)</div>`;
+  window.print();
+}
+function renderPosLetzte(){
+  const el=document.getElementById('posLetzte');
+  const l=[...state.buchungen].sort((a,b)=>b.ts.localeCompare(a.ts)).slice(0,6);
+  el.innerHTML=l.length? l.map(b=>{
+    const ev=eventVon(b.event_id);
+    return `<div class="pos" style="display:flex;justify-content:space-between;gap:6px;padding:7px 0;border-bottom:1px solid var(--rand)">
+      <div style="${b.status==='storniert'?'text-decoration:line-through;color:var(--grau)':''}">
+        <b>#${b.belegnr}</b> ${esc(ev?ev.name:'')}<br><span class="muted">${fmtZeit(b.ts)} · ${fmtEur(b.summe)}</span></div>
+      <div class="row" style="gap:4px">
+        <button class="btn-o" style="min-height:38px;padding:6px 10px" onclick="belegDrucken('${b.id}')">🖨</button>
+        ${b.status==='bezahlt'?`<button class="btn-o" style="min-height:38px;padding:6px 10px" onclick="stornoDialog('${b.id}')">✖</button>`:''}
+      </div></div>`;
+  }).join('') : '<p class="muted">Noch keine Buchungen.</p>';
+}
+function stornoDialog(id){
+  const b=state.buchungen.find(x=>x.id===id); if(!b) return;
+  modal(`<h2>Buchung #${b.belegnr} stornieren?</h2>
+    <p class="muted">Die Buchung bleibt sichtbar (durchgestrichen), Plätze und Kontingent werden wieder frei. Bar-Stornos werden im Kassenbuch als Auszahlung erfasst.</p>
+    <label>Begründung (Pflicht)</label>
+    <input id="stornoGrund" style="width:100%" placeholder="z. B. Fehleingabe, Rücknahme…">
+    <div class="row" style="margin-top:14px">
+      <button class="btn-o" onclick="modalZu()">Abbrechen</button>
+      <button class="btn-r grow" onclick="stornoAusfuehren('${id}')">Stornieren</button>
+    </div>`);
+}
+function stornoAusfuehren(id){
+  const g=document.getElementById('stornoGrund').value.trim();
+  if(!g){ alert('Bitte eine Begründung angeben.'); return; }
+  const b=state.buchungen.find(x=>x.id===id); if(!b||b.status!=='bezahlt') return;
+  b.status='storniert'; b.storno_grund=g; b.storno_ts=nowISO();
+  upsertLokal('buchungen',b);
+  seatsFreigeben(id);
+  modalZu(); renderAlles();
+}
+/* ======================= EVENTS ======================= */
+function renderEvents(){
+  const el=document.getElementById('eventListe');
+  const evs=state.events.filter(e=>!e.geloescht).sort((a,b)=>(a.datum||'').localeCompare(b.datum||''));
+  el.innerHTML=evs.length? evs.map(e=>{
+    const z=freiZaehlung(e);
+    const kats=katsVon(e.id);
+    const modusTxt={frei:'Freie Platzwahl',sitzplan:'Nummerierte Sitzplätze',beides:'Sitzplan + freier Bereich'}[e.modus];
+    return `<div class="card" style="${e.archiviert?'opacity:.55':''}">
+      <div class="row">
+        <div class="grow"><h3>${esc(e.name)} ${e.archiviert?'<span class="badge b-grau">archiviert</span>':''}</h3>
+        <p class="muted">${fmtDat(e.datum)} ${esc(e.uhrzeit||'')} · ${esc(e.ort||'')} · ${modusTxt}</p></div>
+        <button class="btn-o" onclick="eventDialog('${e.id}')">✎ Bearbeiten</button>
+        <button class="btn-o" onclick="eventArchiv('${e.id}')">${e.archiviert?'Reaktivieren':'Archivieren'}</button>
+      </div>
+      <div class="row" style="margin:8px 0">
+        ${e.modus!=='sitzplan'?`<span class="badge b-gruen">${z.frei} frei</span>`:''}
+        ${e.modus!=='frei'?`<span class="badge b-gruen">${z.sitzFrei}/${z.gesamtSitze} Sitze frei</span>`:''}
+        <span class="badge b-rot">${z.verkauft+z.sitzV} verkauft</span>
+        <span class="badge b-gelb">${z.reserviert+z.sitzR} reserviert</span>
+      </div>
+      <p class="muted">Kategorien: ${kats.map(k=>`${esc(k.name)} ${fmtEur(k.preis)}`).join(' · ')||'– keine –'}</p>
+    </div>`;
+  }).join('') : '<p class="muted">Noch keine Veranstaltungen.</p>';
+}
+function eventArchiv(id){
+  const e=eventVon(id); if(!e) return;
+  e.archiviert=!e.archiviert; upsertLokal('events',e); renderAlles();
+}
+function eventDialog(id){
+  const e=id?eventVon(id):null;
+  const kats=e?katsVon(e.id):[];
+  modal(`<h2>${e?'Event bearbeiten':'Neues Event'}</h2>
+    <label>Name *</label><input id="evName" style="width:100%" value="${esc(e?e.name:'')}">
+    <div class="row">
+      <div class="grow"><label>Datum *</label><input type="date" id="evDatum" style="width:100%" value="${e?e.datum:''}"></div>
+      <div class="grow"><label>Uhrzeit</label><input type="time" id="evZeit" style="width:100%" value="${esc(e?e.uhrzeit||'':'')}"></div>
+    </div>
+    <label>Ort</label><input id="evOrt" style="width:100%" value="${esc(e?e.ort||'':'')}">
+    <label>Platzvergabe</label>
+    <select id="evModus" style="width:100%" onchange="eventModusFelder()">
+      <option value="frei" ${e&&e.modus==='frei'?'selected':''}>Freie Platzwahl (nur Kontingent)</option>
+      <option value="sitzplan" ${e&&e.modus==='sitzplan'?'selected':''}>Nummerierte Sitzplätze</option>
+      <option value="beides" ${e&&e.modus==='beides'?'selected':''}>Beides (Sitzplan + freies Kontingent)</option>
+    </select>
+    <div class="row">
+      <div class="grow" id="fKont"><label>Kontingent freier Bereich</label><input type="number" id="evKont" style="width:100%" min="0" value="${e?e.kontingent||0:100}"></div>
+      <div class="grow" id="fReihen"><label>Reihen</label><input type="number" id="evReihen" style="width:100%" min="1" value="${e?e.reihen||10:10}"></div>
+      <div class="grow" id="fPpr"><label>Plätze je Reihe</label><input type="number" id="evPpr" style="width:100%" min="1" value="${e?e.ppr||12:12}"></div>
+    </div>
+    ${e&&e.modus!=='frei'?'<p class="muted">⚠️ Sitzplan-Größe nur ändern, solange noch keine Plätze verkauft sind.</p>':''}
+    <h3 style="margin-top:16px">Kartenkategorien &amp; Preise</h3>
+    <div id="katZeilen">${kats.map(k=>katZeileHtml(k)).join('')}</div>
+    <button class="btn-o" style="margin-top:6px" onclick="katZeileNeu()">＋ Kategorie</button>
+    <div class="row" style="margin-top:16px">
+      <button class="btn-o" onclick="modalZu()">Abbrechen</button>
+      <button class="btn-p grow" onclick="eventSpeichern('${e?e.id:''}')">Speichern</button>
+    </div>`,true);
+  eventModusFelder();
+  if(!e){ katZeileNeu('Erwachsener','12'); katZeileNeu('Ermäßigt','8'); katZeileNeu('Freikarte','0'); }
+}
+function katZeileHtml(k){
+  return `<div class="row" data-kid="${k?k.id:''}" style="margin-bottom:6px">
+    <input class="katName grow" placeholder="Kategorie" value="${esc(k?k.name:'')}">
+    <input class="katPreis" style="width:110px; text-align:right" inputmode="decimal" placeholder="Preis €" value="${k?String(k.preis).replace('.',','):''}">
+    <button class="btn-o" onclick="this.parentElement.remove()">✕</button></div>`;
+}
+function katZeileNeu(n,p){
+  const d=document.createElement('div'); d.innerHTML=katZeileHtml(null);
+  const z=d.firstElementChild;
+  if(typeof n==='string'){ z.querySelector('.katName').value=n; z.querySelector('.katPreis').value=p; }
+  document.getElementById('katZeilen').appendChild(z);
+}
+function eventModusFelder(){
+  const m=document.getElementById('evModus').value;
+  document.getElementById('fKont').style.display=(m!=='sitzplan')?'block':'none';
+  document.getElementById('fReihen').style.display=(m!=='frei')?'block':'none';
+  document.getElementById('fPpr').style.display=(m!=='frei')?'block':'none';
+}
+function eventSpeichern(id){
+  const name=document.getElementById('evName').value.trim();
+  const datum=document.getElementById('evDatum').value;
+  if(!name||!datum){ alert('Name und Datum sind Pflicht.'); return; }
+  const e=id?eventVon(id):{id:uid(), archiviert:false};
+  e.name=name; e.datum=datum;
+  e.uhrzeit=document.getElementById('evZeit').value;
+  e.ort=document.getElementById('evOrt').value.trim();
+  e.modus=document.getElementById('evModus').value;
+  e.kontingent=parseInt(document.getElementById('evKont').value,10)||0;
+  e.reihen=parseInt(document.getElementById('evReihen').value,10)||0;
+  e.ppr=parseInt(document.getElementById('evPpr').value,10)||0;
+  upsertLokal('events',e);
+  // Kategorien abgleichen
+  const vorhandene=katsVon(e.id);
+  const bleiben=new Set();
+  document.querySelectorAll('#katZeilen [data-kid]').forEach(z=>{
+    const n=z.querySelector('.katName').value.trim();
+    if(!n) return;
+    const preis=num(z.querySelector('.katPreis').value);
+    const kid=z.dataset.kid;
+    const k=kid?vorhandene.find(x=>x.id===kid):null;
+    if(k){ k.name=n; k.preis=preis; upsertLokal('kategorien',k); bleiben.add(k.id); }
+    else { const neu={id:uid(), event_id:e.id, name:n, preis, geloescht:false}; upsertLokal('kategorien',neu); bleiben.add(neu.id); }
+  });
+  for(const k of vorhandene) if(!bleiben.has(k.id)){ k.geloescht=true; upsertLokal('kategorien',k); }
+  modalZu(); renderAlles();
+}
+
+/* ======================= RESERVIERUNGEN ======================= */
+function renderRes(){
+  const t=document.getElementById('resTabelle');
+  const rs=[...state.reservierungen].sort((a,b)=>b.ts.localeCompare(a.ts));
+  const heute=new Date().toISOString().slice(0,10);
+  t.innerHTML=`<tr><th>Name</th><th>Event</th><th>Karten</th><th>Verfall</th><th>Status</th><th></th></tr>`+
+    (rs.length? rs.map(r=>{
+      const ev=eventVon(r.event_id);
+      const k=state.kategorien.find(x=>x.id===r.katId);
+      const abgelaufen=r.status==='offen' && r.verfall && r.verfall<heute;
+      const status=r.status==='offen'?(abgelaufen?'<span class="badge b-rot">abgelaufen</span>':'<span class="badge b-gelb">offen</span>')
+        : r.status==='eingeloest'?'<span class="badge b-gruen">eingelöst</span>':'<span class="badge b-grau">freigegeben</span>';
+      return `<tr>
+        <td><b>${esc(r.name)}</b><br><span class="muted">${esc(r.kontakt||'')}</span></td>
+        <td>${esc(ev?ev.name:'')}</td>
+        <td>${r.menge}× ${esc(k?k.name:'')}${r.seats&&r.seats.length?`<br><span class="muted">${r.seats.join(', ')}</span>`:''}</td>
+        <td>${r.verfall?fmtDat(r.verfall):'–'}</td>
+        <td>${status}</td>
+        <td>${r.status==='offen'?`
+          <button class="btn-g" style="min-height:38px;padding:6px 10px" onclick="resEinloesen('${r.id}')">✓ Einlösen</button>
+          <button class="btn-o" style="min-height:38px;padding:6px 10px" onclick="resFreigeben('${r.id}')">Freigeben</button>`:''}</td>
+      </tr>`;
+    }).join('') : '<tr><td colspan="6" class="muted">Keine Reservierungen.</td></tr>');
+}
+function resDialog(vorEvent,vorKat,vorMenge,vorSeats){
+  const evs=state.events.filter(e=>!e.archiviert&&!e.geloescht);
+  modal(`<h2>Neue Reservierung</h2>
+    <label>Name *</label><input id="rName" style="width:100%">
+    <label>Telefon / E-Mail</label><input id="rKontakt" style="width:100%">
+    <label>Veranstaltung *</label>
+    <select id="rEvent" style="width:100%" onchange="resKatFuellen()">${evs.map(e=>`<option value="${e.id}" ${vorEvent===e.id?'selected':''}>${esc(e.name)} (${fmtDat(e.datum)})</option>`).join('')}</select>
+    <label>Kategorie *</label><select id="rKat" style="width:100%"></select>
+    <label>Anzahl Karten *</label><input type="number" id="rMenge" min="1" value="${vorMenge||1}" style="width:100%" ${vorSeats&&vorSeats.length?'readonly':''}>
+    ${vorSeats&&vorSeats.length?`<p class="muted">Plätze aus dem Warenkorb: <b>${vorSeats.join(', ')}</b></p>`:'<p class="muted">Tipp: Reservierungen mit konkreten Sitzplätzen legst du am schnellsten über den Warenkorb der Kasse an („Als Reservierung").</p>'}
+    <label>Verfallsdatum (optional)</label><input type="date" id="rVerfall" style="width:100%">
+    <div class="row" style="margin-top:14px">
+      <button class="btn-o" onclick="modalZu()">Abbrechen</button>
+      <button class="btn-p grow" onclick="resSpeichern('${(vorSeats||[]).join('|')}')">Reservieren</button>
+    </div>`);
+  resKatFuellen(vorKat);
+}
+function resKatFuellen(vorKat){
+  const evId=document.getElementById('rEvent').value;
+  document.getElementById('rKat').innerHTML=katsVon(evId).map(k=>`<option value="${k.id}" ${vorKat===k.id?'selected':''}>${esc(k.name)} – ${fmtEur(k.preis)}</option>`).join('');
+}
+async function resSpeichern(seatsStr){
+  const name=document.getElementById('rName').value.trim();
+  if(!name){ alert('Bitte einen Namen angeben.'); return; }
+  const evId=document.getElementById('rEvent').value;
+  const ev=eventVon(evId);
+  const seats=seatsStr?seatsStr.split('|').filter(Boolean):[];
+  const menge=seats.length||parseInt(document.getElementById('rMenge').value,10)||1;
+  if(!seats.length){
+    const z=freiZaehlung(ev);
+    if(ev.modus==='sitzplan'){ alert('Dieses Event hat nur nummerierte Plätze – Reservierung bitte über die Kasse mit Platzwahl („Als Reservierung").'); return; }
+    if(menge>z.frei){ alert(`Nur noch ${z.frei} Karten im freien Kontingent verfügbar.`); return; }
+  }
+  const id=uid();
+  if(seats.length){
+    const sperre=await seatsReservieren(evId,seats,id,'reservierung');
+    if(!sperre.ok){ alert('⚠️ Ein Platz wurde soeben anderweitig vergeben – bitte neu wählen.'); await syncPull(); renderAlles(); return; }
+  }
+  const r={id, event_id:evId, name, kontakt:document.getElementById('rKontakt').value.trim(),
+    katId:document.getElementById('rKat').value, menge, seats,
+    verfall:document.getElementById('rVerfall').value||null, status:'offen', ts:nowISO()};
+  upsertLokal('reservierungen',r);
+  modalZu(); renderAlles();
+}
+function resAusKorb(){
+  if(!pos.cart.length){ alert('Der Warenkorb ist leer.'); return; }
+  if(pos.cart.length>1){ alert('Für eine Reservierung bitte nur eine Kategorie im Warenkorb lassen.'); return; }
+  const p=pos.cart[0];
+  resDialog(pos.eventId,p.katId,p.menge,p.seats||[]);
+  pos.cart=[]; renderKasse();
+}
+function resEinloesen(id){
+  const r=state.reservierungen.find(x=>x.id===id); if(!r||r.status!=='offen') return;
+  const k=state.kategorien.find(x=>x.id===r.katId); if(!k){ alert('Kategorie nicht gefunden.'); return; }
+  // Reservierung in den Kassen-Warenkorb übernehmen
+  pos={eventId:r.event_id, katId:r.katId,
+    cart:[{katId:k.id,name:k.name,preis:k.preis,menge:r.menge,seats:r.seats||[]}], einloesenVon:r.id};
+  r.status='eingeloest'; upsertLokal('reservierungen',r);
+  seatsFreigeben(r.id); // Sperre wird durch den Verkauf neu gesetzt
+  zeige('kasse');
+  document.getElementById('wkKunde').value=r.name;
+  alert(`Reservierung von ${r.name} liegt im Warenkorb – jetzt „Kassieren" drücken.`);
+}
+function resFreigeben(id){
+  const r=state.reservierungen.find(x=>x.id===id); if(!r) return;
+  if(!confirm(`Reservierung von ${r.name} wirklich freigeben? Die Plätze werden wieder verfügbar.`)) return;
+  r.status='freigegeben'; upsertLokal('reservierungen',r);
+  seatsFreigeben(id);
+  renderAlles();
+}
+
+/* ======================= KUNDEN ======================= */
+function renderKunden(){
+  const t=document.getElementById('kundenTabelle');
+  const filter=(document.getElementById('kundenSuche').value||'').toLowerCase();
+  const m={};
+  for(const r of state.reservierungen){ if(!r.name) continue;
+    const k=m[r.name.toLowerCase()]??={name:r.name,kontakt:r.kontakt||'',res:0,kaeufe:0,umsatz:0};
+    k.res++; if(r.kontakt) k.kontakt=r.kontakt; }
+  for(const b of aktiveB()){ if(!b.kunde) continue;
+    const k=m[b.kunde.toLowerCase()]??={name:b.kunde,kontakt:'',res:0,kaeufe:0,umsatz:0};
+    k.kaeufe++; k.umsatz+=b.summe; }
+  const liste=Object.values(m).filter(k=>!filter||k.name.toLowerCase().includes(filter))
+    .sort((a,b)=>a.name.localeCompare(b.name,'de'));
+  t.innerHTML=`<tr><th>Name</th><th>Kontakt</th><th>Reservierungen</th><th>Käufe</th><th>Umsatz</th></tr>`+
+    (liste.length? liste.map(k=>`<tr><td><b>${esc(k.name)}</b></td><td>${esc(k.kontakt)}</td>
+      <td>${k.res}</td><td>${k.kaeufe}</td><td>${fmtEur(k.umsatz)}</td></tr>`).join('')
+    : '<tr><td colspan="5" class="muted">Keine Kunden erfasst.</td></tr>');
+}
+/* ======================= BERICHTE ======================= */
+function renderDash(){
+  const el=document.getElementById('dashInhalt');
+  const evs=state.events.filter(e=>!e.geloescht&&!e.archiviert);
+  let gesamt=0,bar=0,karte=0;
+  for(const b of aktiveB()){ gesamt+=b.summe; if(b.zahlungsart==='bar') bar+=b.summe; else karte+=b.summe; }
+  let h=`<div class="card"><h3>Gesamt</h3><div class="kpi">${fmtEur(gesamt)}</div>
+    <p class="muted">💶 Bar: ${fmtEur(bar)} &nbsp;·&nbsp; 💳 Karte: ${fmtEur(karte)} &nbsp;·&nbsp; ${aktiveB().length} Buchungen</p></div>`;
+  for(const e of evs){
+    const z=freiZaehlung(e);
+    const kap=(z.gesamtSitze+z.kontFrei)||1;
+    const v=z.verkauft+z.sitzV, r=z.reserviert+z.sitzR, frei=kap-v-r;
+    let umsatz=0; const proKat={};
+    for(const b of aktiveB()) if(b.event_id===e.id){ umsatz+=b.summe;
+      for(const p of b.positionen){ proKat[p.name]=(proKat[p.name]||0)+p.menge; } }
+    h+=`<div class="card"><h3>${esc(e.name)}</h3><p class="muted">${fmtDat(e.datum)} · Kapazität ${kap}</p>
+      <div class="balken">
+        <i style="width:${v/kap*100}%;background:var(--rot)"></i>
+        <i style="width:${r/kap*100}%;background:var(--gelb)"></i>
+        <i style="width:${frei/kap*100}%;background:var(--gruen)"></i></div>
+      <p class="muted">🔴 ${v} verkauft · 🟡 ${r} reserviert · 🟢 ${frei} frei · Auslastung ${Math.round((v+r)/kap*100)} %</p>
+      <div class="kpi">${fmtEur(umsatz)}</div>
+      <p class="muted">${Object.entries(proKat).map(([k,n])=>`${n}× ${esc(k)}`).join(' · ')||'noch keine Verkäufe'}</p></div>`;
+  }
+  el.innerHTML=h;
+}
+function renderVerkaeufe(){
+  const sel=document.getElementById('fEvent');
+  const evs=state.events.filter(e=>!e.geloescht);
+  const alt=sel.value;
+  sel.innerHTML='<option value="">Alle Events</option>'+evs.map(e=>`<option value="${e.id}">${esc(e.name)}</option>`).join('');
+  sel.value=alt;
+  const fE=sel.value, fS=document.getElementById('fStatus').value,
+        fZ=document.getElementById('fZahlart').value, fD=document.getElementById('fDatum').value;
+  const liste=[...state.buchungen].sort((a,b)=>b.ts.localeCompare(a.ts))
+    .filter(b=>(!fE||b.event_id===fE)&&(!fS||b.status===fS)&&(!fZ||b.zahlungsart===fZ)&&(!fD||b.ts.slice(0,10)===fD));
+  document.getElementById('verkaufTabelle').innerHTML=
+    `<tr><th>Beleg</th><th>Zeit</th><th>Event</th><th>Positionen</th><th>Kunde</th><th>Zahlung</th><th>Summe</th><th></th></tr>`+
+    (liste.length? liste.map(b=>{
+      const ev=eventVon(b.event_id);
+      return `<tr class="${b.status==='storniert'?'storno':''}">
+        <td><b>#${b.belegnr}</b>${b.status==='storniert'?`<br><span class="badge b-rot">Storno</span>`:''}</td>
+        <td>${fmtZeit(b.ts)}</td><td>${esc(ev?ev.name:'')}</td>
+        <td>${b.positionen.map(p=>`${p.menge}× ${esc(p.name)}${p.seats&&p.seats.length?' ('+p.seats.join(', ')+')':''}`).join('<br>')}
+          ${b.storno_grund?`<br><span class="muted">Grund: ${esc(b.storno_grund)}</span>`:''}</td>
+        <td>${esc(b.kunde||'')}</td><td>${b.zahlungsart==='bar'?'Bar':'Karte'}</td>
+        <td><b>${fmtEur(b.summe)}</b></td>
+        <td><button class="btn-o" style="min-height:36px;padding:5px 9px" onclick="belegDrucken('${b.id}')">🖨</button>
+          ${b.status==='bezahlt'?`<button class="btn-o" style="min-height:36px;padding:5px 9px" onclick="stornoDialog('${b.id}')">✖</button>`:''}</td></tr>`;
+    }).join('') : '<tr><td colspan="8" class="muted">Keine Buchungen gefunden.</td></tr>');
+}
+
+/* ---- Kassenbuch (nur Bar-Bewegungen) ---- */
+function kbBewegungen(){
+  const rows=[];
+  for(const b of state.buchungen){
+    if(b.zahlungsart!=='bar') continue;
+    rows.push({ts:b.ts, text:`Verkauf Beleg #${b.belegnr}`, betrag:b.summe});
+    if(b.status==='storniert') rows.push({ts:b.storno_ts||b.updated_at||b.ts, text:`Storno Beleg #${b.belegnr} – ${b.storno_grund||''}`, betrag:-b.summe});
+  }
+  for(const k of state.kasse) rows.push({ts:k.ts, text:(k.typ==='einlage'?'Einlage: ':'Entnahme: ')+k.text, betrag:k.typ==='einlage'?k.betrag:-k.betrag});
+  for(const a of state.abschluesse) rows.push({ts:a.ts, text:`— Tagesabschluss: gezählt ${fmtEur(a.gezaehlt)}, Differenz ${fmtEur(a.differenz)} —`, betrag:null});
+  rows.sort((a,b)=>a.ts.localeCompare(b.ts));
+  return rows;
+}
+function renderKassenbuch(){
+  const rows=kbBewegungen(); let saldo=0;
+  document.getElementById('kbTabelle').innerHTML=
+    `<tr><th>Zeit</th><th>Vorgang</th><th style="text-align:right">Betrag</th><th style="text-align:right">Bestand</th></tr>`+
+    (rows.length? rows.map(r=>{
+      if(r.betrag!=null) saldo+=r.betrag;
+      return `<tr${r.betrag==null?' style="background:#f8fafc"':''}><td>${fmtZeit(r.ts)}</td><td>${esc(r.text)}</td>
+        <td style="text-align:right; color:${r.betrag<0?'var(--rot)':'inherit'}">${r.betrag!=null?fmtEur(r.betrag):''}</td>
+        <td style="text-align:right"><b>${r.betrag!=null?fmtEur(saldo):''}</b></td></tr>`;
+    }).join('') : '<tr><td colspan="4" class="muted">Noch keine Bewegungen.</td></tr>');
+}
+function kasseBewegung(typ){
+  modal(`<h2>${typ==='einlage'?'Einlage':'Entnahme'} Bargeld</h2>
+    <label>Betrag €</label><input id="kbBetrag" inputmode="decimal" style="width:100%; text-align:right; font-size:1.3rem">
+    <label>Verwendungszweck *</label><input id="kbText" style="width:100%" placeholder="${typ==='einlage'?'z. B. Startgeld / Wechselgeld':'z. B. Einzahlung Bank, Ausgabe…'}">
+    <div class="row" style="margin-top:14px">
+      <button class="btn-o" onclick="modalZu()">Abbrechen</button>
+      <button class="btn-p grow" onclick="kasseBewegungSpeichern('${typ}')">Buchen</button></div>`);
+}
+function kasseBewegungSpeichern(typ){
+  const betrag=num(document.getElementById('kbBetrag').value);
+  const text=document.getElementById('kbText').value.trim();
+  if(betrag<=0||!text){ alert('Bitte Betrag und Verwendungszweck angeben.'); return; }
+  upsertLokal('kasse',{id:uid(), typ, betrag, text, ts:nowISO()});
+  modalZu(); renderAlles();
+}
+
+/* ---- Tagesabschluss ---- */
+const STUECKELUNG=[['500 €',500],['200 €',200],['100 €',100],['50 €',50],['20 €',20],['10 €',10],['5 €',5],
+  ['2 €',2],['1 €',1],['50 c',0.5],['20 c',0.2],['10 c',0.1],['5 c',0.05],['2 c',0.02],['1 c',0.01]];
+function barSeitLetztemAbschluss(){
+  const letzter=state.abschluesse.length?[...state.abschluesse].sort((a,b)=>b.ts.localeCompare(a.ts))[0].ts:'1970';
+  return kbBewegungen().filter(r=>r.betrag!=null && r.ts>letzter).reduce((s,r)=>s+r.betrag,0);
+}
+function renderAbschluss(){
+  const el=document.getElementById('abschlussInhalt'); if(!el) return;
+  // Nicht neu aufbauen, während gezählt wird (sonst gehen Eingaben verloren)
+  if(el.dataset.n===String(state.abschluesse.length) && el.contains(document.activeElement)) { abschlussRechnen(); return; }
+  if(el.dataset.n===String(state.abschluesse.length) && el.innerHTML!==''){ abschlussRechnen(); return; }
+  el.dataset.n=String(state.abschluesse.length);
+  const alte=[...state.abschluesse].sort((a,b)=>b.ts.localeCompare(a.ts));
+  el.innerHTML=`<div class="card">
+    <h3>Kassensturz / Tagesabschluss</h3>
+    <label>Startgeld (Wechselgeld zu Beginn) €</label>
+    <input id="abStart" inputmode="decimal" style="width:200px; text-align:right" oninput="abschlussRechnen()" value="0">
+    <h3 style="margin-top:16px">Geld zählen</h3>
+    <div class="zaehl-grid">${STUECKELUNG.map((s,i)=>`<div><label>${s[0]}</label>
+      <input type="number" min="0" id="z${i}" oninput="abschlussRechnen()" placeholder="Stück"></div>`).join('')}</div>
+    <div class="card" style="margin-top:14px; background:#f8fafc">
+      <table class="tbl">
+        <tr><td>Gezählter Bestand</td><td style="text-align:right"><b id="abGezaehlt">0,00 €</b></td></tr>
+        <tr><td>Soll (Startgeld + Bar-Bewegungen seit letztem Abschluss)</td><td style="text-align:right"><b id="abSoll">0,00 €</b></td></tr>
+        <tr><td>Differenz</td><td style="text-align:right"><b id="abDiff" style="font-size:1.3rem">0,00 €</b></td></tr>
+      </table></div>
+    <button class="btn-p" onclick="abschlussBuchen()">✓ Abschluss buchen</button>
+  </div>
+  <div class="card"><h3>Bisherige Abschlüsse</h3>
+    <table class="tbl"><tr><th>Zeit</th><th>Startgeld</th><th>Soll</th><th>Gezählt</th><th>Differenz</th></tr>
+    ${alte.length? alte.map(a=>`<tr><td>${fmtZeit(a.ts)}</td><td>${fmtEur(a.startgeld)}</td><td>${fmtEur(a.soll)}</td>
+      <td>${fmtEur(a.gezaehlt)}</td><td style="color:${Math.abs(a.differenz)<0.005?'var(--gruen)':'var(--rot)'}"><b>${fmtEur(a.differenz)}</b></td></tr>`).join('')
+      :'<tr><td colspan="5" class="muted">Noch keine Abschlüsse.</td></tr>'}</table></div>`;
+  abschlussRechnen();
+}
+function abschlussRechnen(){
+  let gezaehlt=0;
+  STUECKELUNG.forEach((s,i)=>{ const n=parseInt(document.getElementById('z'+i)?.value,10)||0; gezaehlt+=n*s[1]; });
+  gezaehlt=Math.round(gezaehlt*100)/100;
+  const start=num(document.getElementById('abStart').value);
+  const soll=Math.round((start+barSeitLetztemAbschluss())*100)/100;
+  const diff=Math.round((gezaehlt-soll)*100)/100;
+  document.getElementById('abGezaehlt').textContent=fmtEur(gezaehlt);
+  document.getElementById('abSoll').textContent=fmtEur(soll);
+  const d=document.getElementById('abDiff');
+  d.textContent=fmtEur(diff);
+  d.style.color=Math.abs(diff)<0.005?'var(--gruen)':'var(--rot)';
+  return {gezaehlt,soll,diff,start};
+}
+function abschlussBuchen(){
+  const w=abschlussRechnen();
+  if(!confirm(`Tagesabschluss buchen?\nGezählt: ${fmtEur(w.gezaehlt)} · Soll: ${fmtEur(w.soll)} · Differenz: ${fmtEur(w.diff)}`)) return;
+  const zl={}; STUECKELUNG.forEach((s,i)=>{ const n=parseInt(document.getElementById('z'+i).value,10)||0; if(n) zl[s[0]]=n; });
+  upsertLokal('abschluesse',{id:uid(), ts:nowISO(), startgeld:w.start, soll:w.soll, gezaehlt:w.gezaehlt, differenz:w.diff, zaehlliste:zl});
+  renderAlles();
+  alert('Abschluss gebucht – er erscheint im Kassenbuch und in der Liste.');
+}
+
+/* ======================= CSV / BACKUP ======================= */
+function csvDatei(name,zeilen){
+  const csv='﻿'+zeilen.map(z=>z.map(f=>{const s=String(f??'');return /[;"\n]/.test(s)?'"'+s.replace(/"/g,'""')+'"':s;}).join(';')).join('\r\n');
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8'}));
+  a.download=name; a.click(); URL.revokeObjectURL(a.href);
+}
+const eurCsv=n=>(Number(n)||0).toFixed(2).replace('.',',');
+function csvVerkaeufe(){
+  const z=[['Beleg','Datum','Event','Status','Zahlungsart','Kunde','Position','Menge','Einzelpreis','Gesamt','Plätze','Stornogrund']];
+  for(const b of [...state.buchungen].sort((a,c)=>a.ts.localeCompare(c.ts)))
+    for(const p of b.positionen){
+      const ev=eventVon(b.event_id);
+      z.push([b.belegnr,fmtZeit(b.ts),ev?ev.name:'',b.status,b.zahlungsart,b.kunde||'',p.name,p.menge,eurCsv(p.preis),eurCsv(p.preis*p.menge),(p.seats||[]).join(' '),b.storno_grund||'']);
+    }
+  csvDatei('Verkaufsliste.csv',z);
+}
+function csvKassenbuch(){
+  const z=[['Datum','Vorgang','Betrag','Bestand']]; let saldo=0;
+  for(const r of kbBewegungen()){ if(r.betrag!=null) saldo+=r.betrag;
+    z.push([fmtZeit(r.ts),r.text,r.betrag!=null?eurCsv(r.betrag):'',r.betrag!=null?eurCsv(saldo):'']); }
+  csvDatei('Kassenbuch.csv',z);
+}
+function backupExport(){
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(new Blob([JSON.stringify(state,null,1)],{type:'application/json'}));
+  a.download='Kartenvorverkauf_Backup_'+new Date().toISOString().slice(0,10)+'.json';
+  a.click(); URL.revokeObjectURL(a.href);
+  state.einstellungen.letztesBackup=nowISO(); speichern(); renderAlles();
+}
+function backupImport(inp){
+  const f=inp.files[0]; if(!f) return;
+  if(!confirm('⚠️ Das Backup ERSETZT alle aktuellen Daten auf diesem Gerät. Fortfahren?')){ inp.value=''; return; }
+  const r=new FileReader();
+  r.onload=()=>{ try{
+      const neu=JSON.parse(r.result);
+      if(!neu.events||!neu.einstellungen) throw new Error('Formatfehler');
+      state=Object.assign(leererState(),neu); speichern(); renderAlles();
+      alert('Backup eingespielt.');
+    }catch(e){ alert('Datei konnte nicht gelesen werden: '+e.message); } inp.value=''; };
+  r.readAsText(f);
+}
+
+/* ======================= EINSTELLUNGEN ======================= */
+function renderEinstellungen(){
+  const setzen=(id,wert)=>{ const el=document.getElementById(id); if(el&&document.activeElement!==el) el.value=wert||''; };
+  setzen('setVerein',state.einstellungen.verein);
+  setzen('setFusszeile',state.einstellungen.fusszeile);
+  setzen('setSupaUrl',state.einstellungen.supaUrl);
+  setzen('setSupaKey',state.einstellungen.supaKey);
+  const lb=state.einstellungen.letztesBackup;
+  document.getElementById('backupInfo').textContent=lb?('Letztes Backup: '+fmtZeit(lb)):'Noch kein Backup erstellt.';
+  document.getElementById('supaStatus').textContent=supaAktiv()?'✓ konfiguriert':'nicht konfiguriert (Lokalbetrieb)';
+}
+function setVereinSpeichern(){
+  state.einstellungen.verein=document.getElementById('setVerein').value.trim()||'Mein Verein';
+  state.einstellungen.fusszeile=document.getElementById('setFusszeile').value.trim();
+  speichern(); renderAlles(); alert('Gespeichert.');
+}
+async function supaVerbinden(){
+  state.einstellungen.supaUrl=document.getElementById('setSupaUrl').value.trim();
+  state.einstellungen.supaKey=document.getElementById('setSupaKey').value.trim();
+  speichern();
+  if(!supaAktiv()){ netzStatus(); alert('Cloud-Felder geleert – App läuft im Lokalbetrieb.'); return; }
+  document.getElementById('supaStatus').textContent='Verbinde…';
+  try{
+    const r=await supaFetch('events?select=id&limit=1');
+    if(!r.ok) throw new Error('HTTP '+r.status+' – Schema schon eingespielt? Key korrekt?');
+    await erstSync(); pollingStart();
+    document.getElementById('supaStatus').textContent='✓ verbunden & synchronisiert';
+    alert('Cloud-Verbindung steht! Beide Geräte gleich konfigurieren, dann arbeiten sie mit denselben Daten.');
+  }catch(e){
+    document.getElementById('supaStatus').textContent='✗ Fehler: '+e.message;
+    alert('Verbindung fehlgeschlagen: '+e.message);
+  }
+  renderAlles();
+}
+
+/* ======================= BEISPIELDATEN ======================= */
+function beispieldatenAnlegen(){
+  const mk=(t,z)=>{ z.beispiel=true; z.updated_at=nowISO(); state[t].push(z); };
+  const e1={id:uid(),name:'Theaterabend „Der Talisman“',datum:'2026-10-17',uhrzeit:'19:30',ort:'Pfarrsaal',modus:'sitzplan',kontingent:0,reihen:10,ppr:12,archiviert:false};
+  const e2={id:uid(),name:'Frühschoppen mit Musikverein',datum:'2026-09-06',uhrzeit:'10:00',ort:'Festhalle',modus:'frei',kontingent:250,reihen:0,ppr:0,archiviert:false};
+  mk('events',e1); mk('events',e2);
+  const k=(ev,n,p)=>{ const x={id:uid(),event_id:ev.id,name:n,preis:p,geloescht:false}; mk('kategorien',x); return x; };
+  const k1a=k(e1,'Erwachsener',15), k1b=k(e1,'Ermäßigt',10); k(e1,'Freikarte',0);
+  const k2a=k(e2,'Eintritt',8); k(e2,'Kind bis 14',0);
+  mk('buchungen',{id:uid(),belegnr:1,event_id:e1.id,status:'bezahlt',zahlungsart:'bar',summe:30,gegeben:50,rueckgeld:20,kunde:'Maria Huber',storno_grund:null,ts:nowISO(),
+    positionen:[{katId:k1a.id,name:k1a.name,preis:15,menge:2,seats:['R1-P5','R1-P6']}]});
+  mk('buchungen',{id:uid(),belegnr:2,event_id:e2.id,status:'bezahlt',zahlungsart:'karte',summe:24,gegeben:null,rueckgeld:null,kunde:null,storno_grund:null,ts:nowISO(),
+    positionen:[{katId:k2a.id,name:k2a.name,preis:8,menge:3,seats:[]}]});
+  mk('reservierungen',{id:uid(),event_id:e1.id,name:'Josef Leitner',kontakt:'0664 1234567',katId:k1b.id,menge:2,seats:['R2-P1','R2-P2'],verfall:'2026-10-10',status:'offen',ts:nowISO()});
+  mk('kasse',{id:uid(),typ:'einlage',betrag:100,text:'Startgeld (Beispiel)',ts:nowISO()});
+  state.einstellungen.beispiel=true;
+  speichern();
+}
+async function beispieldatenLoeschen(){
+  if(!confirm('Alle Beispieldaten endgültig löschen und den Echtbetrieb starten?')) return;
+  for(const t of SYNC_TABELLEN) state[t]=state[t].filter(z=>!z.beispiel);
+  state.outbox=state.outbox.filter(o=>!o.zeile.beispiel);
+  if(supaAktiv()&&navigator.onLine){
+    for(const t of SYNC_TABELLEN){ try{ await supaFetch(t+'?beispiel=eq.true',{method:'DELETE'}); }catch(e){} }
+    try{ await supaFetch('seats?beispiel=eq.true',{method:'DELETE'}); }catch(e){}
+  }
+  state.einstellungen.beispiel=false;
+  speichern(); renderAlles();
+  alert('Beispieldaten gelöscht – viel Erfolg beim Kartenvorverkauf!');
+}
+
+/* ======================= START ======================= */
+laden();
+renderAlles();
+if(supaAktiv()){ pollingStart(); syncPush(); syncPull(); }
+else netzStatus();
+/* v1.0.1 */
+
+</script>
+</body>
+</html>
