@@ -242,8 +242,11 @@ main{max-width:1200px; margin:0 auto; padding:16px 14px 90px;}
     <div id="res-mitglieder" class="subview">
       <div class="row" style="margin-bottom:12px">
         <h2 class="grow">Chormitglieder</h2>
+        <button class="btn-o" onclick="document.getElementById('mgImportDatei').click()">⬆ Liste importieren</button>
+        <input type="file" id="mgImportDatei" accept=".csv,.xlsx,.xls" style="display:none" onchange="mitgliederImport(this)">
         <button class="btn-p" onclick="mitgliedDialog()">＋ Mitglied</button>
       </div>
+      <p class="muted" style="margin:0 0 10px">Import: Excel- oder CSV-Datei, Spalte 1 = Name, Spalte 2 = Telefon (optional). Vorhandene Namen werden übersprungen.</p>
       <div class="card"><div style="overflow-x:auto"><table class="tbl" id="mitgliederTabelle"></table></div></div>
     </div>
     <div id="res-resliste" class="subview akt">
@@ -267,7 +270,13 @@ main{max-width:1200px; margin:0 auto; padding:16px 14px 90px;}
       <button data-s="kassenbuch" onclick="subTab('berichte','kassenbuch')">Kassenbuch</button>
       <button data-s="abschluss" onclick="subTab('berichte','abschluss')">Tagesabschluss</button>
     </div>
-    <div id="berichte-dash" class="subview akt"><div id="dashInhalt" class="dash-grid"></div></div>
+    <div id="berichte-dash" class="subview akt">
+      <div class="row" style="margin-bottom:12px">
+        <h2 class="grow">Dashboard</h2>
+        <button class="btn-p" onclick="excelExport()">⬇ Alle Auswertungen als Excel</button>
+      </div>
+      <div id="dashInhalt" class="dash-grid"></div>
+    </div>
     <div id="berichte-verkaeufe" class="subview">
       <div class="card">
         <div class="row">
@@ -1495,6 +1504,121 @@ function csvKassenbuch(){
     z.push([fmtZeit(r.ts),r.text,r.betrag!=null?eurCsv(r.betrag):'',r.betrag!=null?eurCsv(saldo):'']); }
   csvDatei('Kassenbuch.csv',z);
 }
+/* ---- Excel (SheetJS wird bei Bedarf geladen – Internet nötig) ---- */
+let xlsxLade=null;
+function ladeSheetJS(){
+  if(window.XLSX) return Promise.resolve();
+  if(xlsxLade) return xlsxLade;
+  xlsxLade=new Promise((res,rej)=>{
+    const s=document.createElement('script');
+    s.src='https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js';
+    s.onload=res; s.onerror=()=>{ xlsxLade=null; rej(new Error('Excel-Modul konnte nicht geladen werden – Internetverbindung prüfen.')); };
+    document.head.appendChild(s);
+  });
+  return xlsxLade;
+}
+const r2=n=> Math.round((Number(n)||0)*100)/100;
+/* Alle Auswertungen als Blätter (Arrays von Zeilen) */
+function excelDaten(){
+  const d={};
+  d['Events']=[['Event','Datum','Uhrzeit','Ort','Modus','Kapazität','Verkauft','Reserviert','In Kommission','Frei','Auslastung %','Umsatz €']];
+  for(const e of state.events.filter(x=>!x.geloescht)){
+    const z=freiZaehlung(e);
+    const kap=z.gesamtSitze+z.kontFrei;
+    const v=z.verkauft+z.sitzV, r=z.reserviert+z.sitzR, ko=z.kommF+z.sitzK;
+    let umsatz=0; for(const b of aktiveB()) if(b.event_id===e.id) umsatz+=b.summe;
+    d['Events'].push([e.name,fmtDat(e.datum),e.uhrzeit||'',e.ort||'',
+      {frei:'Freie Platzwahl',sitzplan:'Sitzplan',beides:'Sitzplan + frei'}[e.modus],
+      kap,v,r,ko,kap-v-r-ko, kap?Math.round((v+r+ko)/kap*100):0, r2(umsatz)]);
+  }
+  d['Verkäufe']=[['Beleg-Nr.','Datum','Event','Status','Zahlungsart','Kunde','Kategorie','Menge','Einzelpreis €','Gesamt €','Plätze','Stornogrund']];
+  for(const b of [...state.buchungen].sort((a,c)=>a.ts.localeCompare(c.ts))){
+    const ev=eventVon(b.event_id);
+    for(const p of b.positionen)
+      d['Verkäufe'].push([b.belegnr,fmtZeit(b.ts),ev?ev.name:'',b.status,b.zahlungsart==='bar'?'Bar':'Karte',
+        b.kunde||'',p.name,p.menge,r2(p.preis),r2(p.preis*p.menge),(p.seats||[]).join(' '),b.storno_grund||'']);
+  }
+  d['Kassenbuch']=[['Datum','Vorgang','Betrag €','Bestand €']];
+  { let saldo=0;
+    for(const r of kbBewegungen()){
+      if(r.betrag!=null) saldo=r2(saldo+r.betrag);
+      d['Kassenbuch'].push([fmtZeit(r.ts),r.text,r.betrag!=null?r2(r.betrag):'',r.betrag!=null?saldo:'']);
+    } }
+  d['Reservierungen']=[['Name','Kontakt','Event','Kategorie','Menge','Plätze','Verfall','Status','Erstellt']];
+  for(const r of [...state.reservierungen].sort((a,c)=>a.ts.localeCompare(c.ts))){
+    const ev=eventVon(r.event_id), k=state.kategorien.find(x=>x.id===r.katId);
+    d['Reservierungen'].push([r.name,r.kontakt||'',ev?ev.name:'',k?k.name:'',r.menge,(r.seats||[]).join(' '),r.verfall?fmtDat(r.verfall):'',r.status,fmtZeit(r.ts)]);
+  }
+  d['Kommissionen']=[['Mitglied','Event','Status','Ausgegeben','Verkauft','Retour','Offen','Offener Wert €','Abgeliefert €','Ausgegeben am','Notiz']];
+  for(const k of [...state.kommissionen].sort((a,c)=>a.ts.localeCompare(c.ts))){
+    const m=mitgliedVon(k.mitglied_id), ev=eventVon(k.event_id);
+    const ausg=k.positionen.reduce((s,p)=>s+p.menge,0);
+    let verk=0, ret=0, abgeliefert=0;
+    for(const v of (k.vorgaenge||[])){ abgeliefert+=v.betrag||0;
+      for(const p of (v.positionen||[])){ verk+=p.verkauft||0; ret+=p.retour||0; } }
+    d['Kommissionen'].push([m?m.name:'?',ev?ev.name:'',k.status,ausg,verk,ret,ausg-verk-ret,
+      r2(kommOffenWert(k)),r2(abgeliefert),fmtDat(k.ts),k.notiz||'']);
+  }
+  d['Mitglieder']=[['Name','Telefon','Karten offen','Wert offen €','Abgeliefert €','Direktkäufe €']];
+  for(const m of state.mitglieder.filter(x=>!x.geloescht).sort((a,b)=>a.name.localeCompare(b.name,'de'))){
+    let offen=0, wert=0, abgeliefert=0;
+    for(const k of state.kommissionen) if(k.mitglied_id===m.id){
+      if(k.status==='offen') for(const p of kommOffenPos(k)){ offen+=p.offen; wert+=p.offen*p.preis; }
+      for(const v of (k.vorgaenge||[])) abgeliefert+=v.betrag||0;
+    }
+    const direkt=aktiveB().filter(b=>b.mitglied_id===m.id && !b.kommission).reduce((s,b)=>s+b.summe,0);
+    d['Mitglieder'].push([m.name,m.telefon||'',offen,r2(wert),r2(abgeliefert),r2(direkt)]);
+  }
+  d['Abschlüsse']=[['Zeit','Startgeld €','Soll €','Gezählt €','Differenz €']];
+  for(const a of [...state.abschluesse].sort((x,y)=>x.ts.localeCompare(y.ts)))
+    d['Abschlüsse'].push([fmtZeit(a.ts),r2(a.startgeld),r2(a.soll),r2(a.gezaehlt),r2(a.differenz)]);
+  return d;
+}
+async function excelExport(){
+  try{ await ladeSheetJS(); }catch(e){ alert(e.message); return; }
+  const wb=XLSX.utils.book_new();
+  for(const [name,rows] of Object.entries(excelDaten())){
+    const ws=XLSX.utils.aoa_to_sheet(rows);
+    ws['!cols']=rows[0].map((_,c)=>({wch:Math.min(38,Math.max(11,...rows.map(z=>String(z[c]??'').length+2)))}));
+    XLSX.utils.book_append_sheet(wb,ws,name);
+  }
+  XLSX.writeFile(wb,'Kartenvorverkauf_Auswertung_'+new Date().toISOString().slice(0,10)+'.xlsx');
+}
+/* ---- Mitglieder-Import (.xlsx/.csv) ---- */
+function mitgliederAusZeilen(zeilen){
+  let start=0;
+  if(zeilen.length && /name/i.test(String(zeilen[0][0]||''))) start=1;
+  let neu=0, doppelt=0;
+  for(let i=start;i<zeilen.length;i++){
+    const name=String(zeilen[i][0]||'').trim();
+    if(!name) continue;
+    const tel=String(zeilen[i][1]||'').trim();
+    if(state.mitglieder.some(m=>!m.geloescht && m.name.toLowerCase()===name.toLowerCase())){ doppelt++; continue; }
+    upsertLokal('mitglieder',{id:uid(), name, telefon:tel, geloescht:false});
+    neu++;
+  }
+  return {neu,doppelt};
+}
+async function mitgliederImport(inp){
+  const f=inp.files[0]; if(!f) return;
+  let zeilen=[];
+  try{
+    if(/\.(xlsx|xls)$/i.test(f.name)){
+      await ladeSheetJS();
+      const wb=XLSX.read(await f.arrayBuffer());
+      zeilen=XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]],{header:1,defval:''});
+    } else {
+      const text=await f.text();
+      const trenn=(text.match(/;/g)||[]).length>=(text.match(/,/g)||[]).length?';':',';
+      zeilen=text.replace(/^﻿/,'').split(/\r?\n/).map(z=>z.split(trenn).map(x=>x.trim().replace(/^"|"$/g,'')));
+    }
+  }catch(e){ alert('Datei konnte nicht gelesen werden: '+e.message); inp.value=''; return; }
+  const erg=mitgliederAusZeilen(zeilen);
+  inp.value='';
+  renderAlles();
+  alert(`${erg.neu} Mitglieder importiert${erg.doppelt?`, ${erg.doppelt} bereits vorhandene übersprungen`:''}.`);
+}
+
 function backupExport(){
   const a=document.createElement('a');
   a.href=URL.createObjectURL(new Blob([JSON.stringify(state,null,1)],{type:'application/json'}));
@@ -1590,7 +1714,7 @@ laden();
 renderAlles();
 if(supaAktiv()){ pollingStart(); syncPush(); syncPull(); }
 else netzStatus();
-/* v1.1.0 */
+/* v1.2.0 */
 
 </script>
 </body>
