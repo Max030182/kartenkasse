@@ -85,6 +85,11 @@ main{max-width:1200px; margin:0 auto; padding:16px 14px 90px;}
 .sitz.verkauft{background:var(--rot); cursor:not-allowed;}
 .sitz.reserviert{background:var(--gelb);}
 .sitz.gewaehlt{background:var(--blau); outline:3px solid #93c5fd;}
+.sitz.kommission{background:#7c3aed; cursor:not-allowed;}
+.chip{display:inline-block; margin:3px; padding:8px 12px; border-radius:8px; border:2px solid var(--rand); background:#fff; font-weight:600; cursor:pointer; min-height:40px;}
+.chip.verkauft{background:var(--gruen-h); border-color:var(--gruen); color:var(--gruen);}
+.chip.retour{background:var(--gelb-h); border-color:var(--gelb); color:var(--gelb);}
+.b-lila{background:#ede9fe; color:#7c3aed;}
 .sp-legende{display:flex; gap:14px; font-size:.8rem; color:var(--grau); margin:6px 0; flex-wrap:wrap;}
 .sp-legende i{width:14px; height:14px; border-radius:4px; display:inline-block; vertical-align:-2px; margin-right:4px;}
 #buehne{background:#334155; color:#fff; text-align:center; border-radius:8px; padding:6px; margin-bottom:12px; font-size:.8rem; letter-spacing:3px;}
@@ -159,7 +164,7 @@ main{max-width:1200px; margin:0 auto; padding:16px 14px 90px;}
   <nav>
     <button data-v="kasse" class="akt" onclick="zeige('kasse')">Kasse</button>
     <button data-v="events" onclick="zeige('events')">Events</button>
-    <button data-v="res" onclick="zeige('res')">Reservierungen</button>
+    <button data-v="res" onclick="zeige('res')">Vorverkauf</button>
     <button data-v="berichte" onclick="zeige('berichte')">Berichte</button>
     <button data-v="einstellungen" onclick="zeige('einstellungen')">⚙︎</button>
   </nav>
@@ -180,6 +185,7 @@ main{max-width:1200px; margin:0 auto; padding:16px 14px 90px;}
               <span><i style="background:var(--gruen)"></i>frei</span>
               <span><i style="background:var(--blau)"></i>gewählt</span>
               <span><i style="background:var(--gelb)"></i>reserviert</span>
+              <span><i style="background:#7c3aed"></i>Kommission</span>
               <span><i style="background:var(--rot)"></i>verkauft</span>
             </div>
             <div id="sitzplan"></div>
@@ -191,14 +197,16 @@ main{max-width:1200px; margin:0 auto; padding:16px 14px 90px;}
           <h3>Warenkorb</h3>
           <div id="warenkorb"></div>
           <div id="wkSumme">0,00 €</div>
-          <label>Kunde (optional)</label>
-          <input id="wkKunde" placeholder="Name für Beleg/Kundenliste">
+          <label>Kunde / Mitglied (optional)</label>
+          <input id="wkKunde" list="mitgliederListe" placeholder="Name – Mitglieder werden vorgeschlagen">
+          <datalist id="mitgliederListe"></datalist>
           <div class="row" style="margin-top:12px">
             <button class="btn-g grow" style="font-size:1.15rem; min-height:58px" onclick="zurKasse()">💶 Kassieren</button>
           </div>
           <div class="row" style="margin-top:8px">
             <button class="btn-o grow" onclick="korbLeeren()">Leeren</button>
             <button class="btn-o grow" onclick="resAusKorb()">Als Reservierung</button>
+            <button class="btn-o grow" onclick="kommAusKorb()">Als Kommission</button>
           </div>
         </div>
         <div class="card">
@@ -220,7 +228,23 @@ main{max-width:1200px; margin:0 auto; padding:16px 14px 90px;}
   <section id="view-res" class="view">
     <div class="sub-tabs">
       <button class="akt" data-s="resliste" onclick="subTab('res','resliste')">Reservierungen</button>
+      <button data-s="kommissionen" onclick="subTab('res','kommissionen')">Kommissionen</button>
+      <button data-s="mitglieder" onclick="subTab('res','mitglieder')">Mitglieder</button>
       <button data-s="kunden" onclick="subTab('res','kunden')">Kunden</button>
+    </div>
+    <div id="res-kommissionen" class="subview">
+      <div class="row" style="margin-bottom:12px">
+        <h2 class="grow">Kommissionen</h2>
+        <span class="muted">Neue Kommission: Kasse → Karten in den Warenkorb → „Als Kommission"</span>
+      </div>
+      <div id="kommListe"></div>
+    </div>
+    <div id="res-mitglieder" class="subview">
+      <div class="row" style="margin-bottom:12px">
+        <h2 class="grow">Chormitglieder</h2>
+        <button class="btn-p" onclick="mitgliedDialog()">＋ Mitglied</button>
+      </div>
+      <div class="card"><div style="overflow-x:auto"><table class="tbl" id="mitgliederTabelle"></table></div></div>
     </div>
     <div id="res-resliste" class="subview akt">
       <div class="row" style="margin-bottom:12px">
@@ -341,6 +365,7 @@ const num=v=>{ const n=parseFloat(String(v).replace(',','.')); return isNaN(n)?0
 function leererState(){
   return {
     events:[], kategorien:[], buchungen:[], reservierungen:[], kasse:[], abschluesse:[],
+    mitglieder:[], kommissionen:[],
     einstellungen:{verein:'Mein Verein', fusszeile:'Vielen Dank für Ihren Besuch!', pin:'1234',
       supaUrl:'', supaKey:'', beispiel:true, letztesBackup:null},
     outbox:[], lastPull:null
@@ -357,7 +382,7 @@ function speichern(){
 }
 
 /* Zentrale Mutation: lokal anwenden + in Cloud-Warteschlange */
-const SYNC_TABELLEN=['events','kategorien','buchungen','reservierungen','kasse','abschluesse'];
+const SYNC_TABELLEN=['events','kategorien','buchungen','reservierungen','kasse','abschluesse','mitglieder','kommissionen'];
 function upsertLokal(tabelle,zeile){
   zeile.updated_at=nowISO();
   const arr=state[tabelle];
@@ -532,8 +557,25 @@ document.getElementById('modalBg').addEventListener('click',e=>{ if(e.target.id=
 /* ======================= Abgeleitete Daten ======================= */
 const aktiveB=()=> state.buchungen.filter(b=>b.status==='bezahlt');
 const offeneR=()=> state.reservierungen.filter(r=>r.status==='offen');
+const offeneK=()=> state.kommissionen.filter(k=>k.status==='offen');
 function eventVon(id){ return state.events.find(e=>e.id===id); }
 function katsVon(eventId){ return state.kategorien.filter(k=>k.event_id===eventId && !k.geloescht); }
+function mitgliedVon(id){ return state.mitglieder.find(m=>m.id===id); }
+/* Offener Rest einer Kommission je Position: {katId,name,preis,offen,seatsOffen} */
+function kommOffenPos(k){
+  return k.positionen.map(p=>{
+    let verkauft=0, retour=0; const weg=new Set();
+    for(const v of (k.vorgaenge||[])){
+      const d=(v.positionen||[]).find(x=>x.katId===p.katId);
+      if(d){ verkauft+=d.verkauft||0; retour+=d.retour||0;
+        (d.seatsVerkauft||[]).forEach(s=>weg.add(s)); (d.seatsRetour||[]).forEach(s=>weg.add(s)); }
+    }
+    return {katId:p.katId, name:p.name, preis:p.preis,
+      offen:Math.max(0,p.menge-verkauft-retour),
+      seatsOffen:(p.seats||[]).filter(s=>!weg.has(s))};
+  });
+}
+const kommOffenWert=k=> kommOffenPos(k).reduce((s,p)=>s+p.offen*p.preis,0);
 /* Belegte Sitzplätze eines Events: {"R3-P5":{status,ref,name}} */
 function sitzBelegung(eventId){
   const m={};
@@ -541,18 +583,25 @@ function sitzBelegung(eventId){
     for(const p of b.positionen) for(const s of (p.seats||[])) m[s]={status:'verkauft',ref:b.id};
   for(const r of offeneR()) if(r.event_id===eventId)
     for(const s of (r.seats||[])) m[s]={status:'reserviert',ref:r.id,name:r.name};
+  for(const k of offeneK()) if(k.event_id===eventId){
+    const mg=mitgliedVon(k.mitglied_id);
+    for(const p of kommOffenPos(k)) for(const s of p.seatsOffen)
+      m[s]={status:'kommission',ref:k.id,name:mg?mg.name:''};
+  }
   return m;
 }
 /* Kontingent-Zählung (freier Bereich) */
 function freiZaehlung(ev){
-  let verkauft=0,reserviert=0,sitzV=0,sitzR=0;
+  let verkauft=0,reserviert=0,sitzV=0,sitzR=0,kommF=0,sitzK=0;
   for(const b of aktiveB()) if(b.event_id===ev.id)
     for(const p of b.positionen){ const st=(p.seats||[]).length; sitzV+=st; verkauft+=p.menge-st; }
   for(const r of offeneR()) if(r.event_id===ev.id){ const st=(r.seats||[]).length; sitzR+=st; reserviert+=r.menge-st; }
+  for(const k of offeneK()) if(k.event_id===ev.id)
+    for(const p of kommOffenPos(k)){ sitzK+=p.seatsOffen.length; kommF+=p.offen-p.seatsOffen.length; }
   const gesamtSitze=(ev.modus!=='frei')?(ev.reihen*ev.ppr):0;
   const kontFrei=(ev.modus!=='sitzplan')?(ev.kontingent||0):0;
-  return {verkauft,reserviert, frei:Math.max(0,kontFrei-verkauft-reserviert), kontFrei,
-          sitzV,sitzR, sitzFrei:Math.max(0,gesamtSitze-sitzV-sitzR), gesamtSitze};
+  return {verkauft,reserviert,kommF,sitzK, frei:Math.max(0,kontFrei-verkauft-reserviert-kommF), kontFrei,
+          sitzV,sitzR, sitzFrei:Math.max(0,gesamtSitze-sitzV-sitzR-sitzK), gesamtSitze};
 }
 function belegNrNeu(){
   let max=0; for(const b of state.buchungen){ const n=parseInt(b.belegnr,10); if(n>max) max=n; }
@@ -561,7 +610,7 @@ function belegNrNeu(){
 function renderAlles(){
   document.getElementById('hVerein').textContent=state.einstellungen.verein||'Kartenkasse';
   netzStatus(); bannerRender();
-  renderKasse(); renderEvents(); renderRes(); renderKunden();
+  renderKasse(); renderEvents(); renderRes(); renderKunden(); renderKommissionen(); renderMitglieder();
   renderDash(); renderVerkaeufe(); renderKassenbuch(); renderAbschluss(); renderEinstellungen();
 }
 function bannerRender(){
@@ -585,6 +634,10 @@ function sitzKonflikte(){
       for(const p of b.positionen) for(const s of (p.seats||[])) (zaehler[s]??=[]).push('Beleg #'+b.belegnr);
     for(const r of offeneR()) if(r.event_id===ev.id)
       for(const s of (r.seats||[])) (zaehler[s]??=[]).push('Res. '+r.name);
+    for(const k of offeneK()) if(k.event_id===ev.id){
+      const mg=mitgliedVon(k.mitglied_id);
+      for(const p of kommOffenPos(k)) for(const s of p.seatsOffen) (zaehler[s]??=[]).push('Komm. '+(mg?mg.name:'?'));
+    }
     for(const [s,wer] of Object.entries(zaehler))
       if(wer.length>1) meldungen.push(`${ev.name} ${s} (${wer.join(' + ')})`);
   }
@@ -604,6 +657,8 @@ function renderKasse(){
       <b>${esc(e.name)}</b><br><span class="muted">${fmtDat(e.datum)} ${esc(e.uhrzeit||'')} · ${esc(e.ort||'')} · <b>${frei}</b></span></button>`;
   }).join('');
   renderPosKats(); renderSitzplan(); renderKorb(); renderPosLetzte();
+  const dl=document.getElementById('mitgliederListe');
+  if(dl) dl.innerHTML=state.mitglieder.filter(m=>!m.geloescht).map(m=>`<option value="${esc(m.name)}">`).join('');
 }
 function posEvent(id){ if(pos.eventId!==id){ pos={eventId:id,katId:null,cart:[]}; } renderKasse(); }
 function renderPosKats(){
@@ -645,6 +700,7 @@ function renderSitzplan(){
       if(gewaehlt.has(key)) cls+=' gewaehlt';
       else if(b&&b.status==='verkauft'){ cls+=' verkauft'; dis='disabled'; }
       else if(b&&b.status==='reserviert'){ cls+=' reserviert'; dis='disabled'; }
+      else if(b&&b.status==='kommission'){ cls+=' kommission'; dis='disabled'; }
       h+=`<button class="${cls}" ${dis} title="${key}${b&&b.name?' – '+esc(b.name):''}" onclick="sitzKlick('${key}')">${p}</button>`;
     }
     h+='</div>';
@@ -767,8 +823,10 @@ async function verkaufAbschliessen(){
     alert('⚠️ Mindestens ein gewählter Platz wurde soeben am anderen Gerät verkauft oder reserviert. Der Saalplan wird aktualisiert – bitte Plätze neu wählen.');
     await syncPull(); pos.cart=pos.cart.filter(p=>!(p.seats&&p.seats.length)); renderKasse(); modalZu(); return;
   }
+  const kunde=document.getElementById('wkKunde').value.trim()||null;
+  const mgl=kunde? state.mitglieder.find(m=>!m.geloescht && m.name.toLowerCase()===kunde.toLowerCase()) : null;
   const b={id, belegnr:belegNrNeu(), event_id:pos.eventId, status:'bezahlt', zahlungsart:zahlart,
-    summe:s, gegeben, rueckgeld:rueck, kunde:document.getElementById('wkKunde').value.trim()||null,
+    summe:s, gegeben, rueckgeld:rueck, kunde, mitglied_id:mgl?mgl.id:null,
     storno_grund:null, ts:nowISO(),
     positionen:pos.cart.map(p=>({katId:p.katId,name:p.name,preis:p.preis,menge:p.menge,seats:p.seats||[]}))};
   upsertLokal('buchungen',b);
@@ -865,6 +923,7 @@ function renderEvents(){
         ${e.modus!=='frei'?`<span class="badge b-gruen">${z.sitzFrei}/${z.gesamtSitze} Sitze frei</span>`:''}
         <span class="badge b-rot">${z.verkauft+z.sitzV} verkauft</span>
         <span class="badge b-gelb">${z.reserviert+z.sitzR} reserviert</span>
+        ${z.kommF+z.sitzK?`<span class="badge b-lila">${z.kommF+z.sitzK} in Kommission</span>`:''}
       </div>
       <p class="muted">Kategorien: ${kats.map(k=>`${esc(k.name)} ${fmtEur(k.preis)}`).join(' · ')||'– keine –'}</p>
     </div>`;
@@ -1048,6 +1107,201 @@ function resFreigeben(id){
   renderAlles();
 }
 
+/* ======================= MITGLIEDER ======================= */
+function renderMitglieder(){
+  const t=document.getElementById('mitgliederTabelle'); if(!t) return;
+  const mg=state.mitglieder.filter(m=>!m.geloescht).sort((a,b)=>a.name.localeCompare(b.name,'de'));
+  t.innerHTML=`<tr><th>Name</th><th>Telefon</th><th>Karten offen</th><th>Wert offen</th><th>Abgeliefert</th><th>Direktkäufe</th><th></th></tr>`+
+    (mg.length? mg.map(m=>{
+      let offen=0, wert=0, abgeliefert=0;
+      for(const k of state.kommissionen) if(k.mitglied_id===m.id){
+        if(k.status==='offen'){ for(const p of kommOffenPos(k)){ offen+=p.offen; wert+=p.offen*p.preis; } }
+        for(const v of (k.vorgaenge||[])) abgeliefert+=v.betrag||0;
+      }
+      const direkt=aktiveB().filter(b=>b.mitglied_id===m.id && !b.kommission).reduce((s,b)=>s+b.summe,0);
+      return `<tr><td><b>${esc(m.name)}</b></td><td>${esc(m.telefon||'')}</td>
+        <td>${offen?`<span class="badge b-lila">${offen}</span>`:'–'}</td>
+        <td>${offen?fmtEur(wert):'–'}</td><td>${fmtEur(abgeliefert)}</td><td>${fmtEur(direkt)}</td>
+        <td><button class="btn-o" style="min-height:36px;padding:5px 9px" onclick="mitgliedDialog('${m.id}')">✎</button>
+          <button class="btn-o" style="min-height:36px;padding:5px 9px" onclick="mitgliedLoeschen('${m.id}')">🗑</button></td></tr>`;
+    }).join('') : '<tr><td colspan="7" class="muted">Noch keine Mitglieder – mit „＋ Mitglied" anlegen.</td></tr>');
+}
+function mitgliedDialog(id){
+  const m=id?mitgliedVon(id):null;
+  modal(`<h2>${m?'Mitglied bearbeiten':'Neues Mitglied'}</h2>
+    <label>Name *</label><input id="mgName" style="width:100%" value="${esc(m?m.name:'')}">
+    <label>Telefon (optional)</label><input id="mgTel" style="width:100%" value="${esc(m?m.telefon||'':'')}">
+    <div class="row" style="margin-top:14px">
+      <button class="btn-o" onclick="modalZu()">Abbrechen</button>
+      <button class="btn-p grow" onclick="mitgliedSpeichern('${m?m.id:''}')">Speichern</button></div>`);
+}
+function mitgliedSpeichern(id){
+  const name=document.getElementById('mgName').value.trim();
+  if(!name){ alert('Bitte einen Namen angeben.'); return; }
+  const m=id?mitgliedVon(id):{id:uid(), geloescht:false};
+  m.name=name; m.telefon=document.getElementById('mgTel').value.trim();
+  upsertLokal('mitglieder',m); modalZu(); renderAlles();
+}
+function mitgliedLoeschen(id){
+  const m=mitgliedVon(id); if(!m) return;
+  if(offeneK().some(k=>k.mitglied_id===id)){ alert('Dieses Mitglied hat noch offene Kommissionen – zuerst abrechnen.'); return; }
+  if(!confirm(`${m.name} aus der Mitgliederliste entfernen?`)) return;
+  m.geloescht=true; upsertLokal('mitglieder',m); renderAlles();
+}
+
+/* ======================= KOMMISSIONEN ======================= */
+function kommAusKorb(){
+  if(!pos.cart.length){ alert('Der Warenkorb ist leer – zuerst Karten (und ggf. Plätze) wählen.'); return; }
+  const mg=state.mitglieder.filter(m=>!m.geloescht).sort((a,b)=>a.name.localeCompare(b.name,'de'));
+  if(!mg.length){ alert('Noch keine Mitglieder angelegt – zuerst unter Vorverkauf → Mitglieder anlegen.'); return; }
+  const ev=eventVon(pos.eventId);
+  modal(`<h2>Karten auf Kommission geben</h2>
+    <p class="muted">${esc(ev.name)} – ${pos.cart.map(p=>`${p.menge}× ${esc(p.name)}${p.seats&&p.seats.length?' ('+p.seats.join(', ')+')':''}`).join(', ')}
+    <br>Warenwert: <b>${fmtEur(korbSumme())}</b> (offen bis zur Abrechnung)</p>
+    <label>Mitglied *</label>
+    <select id="kommMitglied" style="width:100%">${mg.map(m=>`<option value="${m.id}">${esc(m.name)}</option>`).join('')}</select>
+    <label>Notiz (optional)</label><input id="kommNotiz" style="width:100%" placeholder="z. B. für Nachbarn, Firma …">
+    <div class="row" style="margin-top:14px">
+      <button class="btn-o" onclick="modalZu()">Abbrechen</button>
+      <button class="btn-p grow" onclick="kommSpeichern()">Kommission ausgeben</button></div>`);
+}
+async function kommSpeichern(){
+  const mid=document.getElementById('kommMitglied').value;
+  const alleSeats=pos.cart.flatMap(p=>p.seats||[]);
+  const id=uid();
+  const sperre=await seatsReservieren(pos.eventId,alleSeats,id,'kommission');
+  if(!sperre.ok){
+    alert('⚠️ Mindestens ein Platz wurde soeben anderweitig vergeben – bitte neu wählen.');
+    await syncPull(); pos.cart=pos.cart.filter(p=>!(p.seats&&p.seats.length)); renderKasse(); modalZu(); return;
+  }
+  const k={id, event_id:pos.eventId, mitglied_id:mid, status:'offen', ts:nowISO(),
+    notiz:document.getElementById('kommNotiz').value.trim()||null,
+    positionen:pos.cart.map(p=>({katId:p.katId,name:p.name,preis:p.preis,menge:p.menge,seats:p.seats||[]})),
+    vorgaenge:[]};
+  upsertLokal('kommissionen',k);
+  pos.cart=[]; pos.katId=null;
+  modalZu(); renderAlles();
+  const m=mitgliedVon(mid);
+  alert(`Kommission an ${m?m.name:''} ausgegeben – Abrechnung später unter Vorverkauf → Kommissionen.`);
+}
+function renderKommissionen(){
+  const el=document.getElementById('kommListe'); if(!el) return;
+  const ks=[...state.kommissionen].sort((a,b)=> (a.status===b.status? b.ts.localeCompare(a.ts) : (a.status==='offen'?-1:1)));
+  el.innerHTML=ks.length? ks.map(k=>{
+    const m=mitgliedVon(k.mitglied_id), ev=eventVon(k.event_id);
+    const op=kommOffenPos(k);
+    const offenGes=op.reduce((s,p)=>s+p.offen,0);
+    const historie=(k.vorgaenge||[]).map(v=>{
+      const teile=(v.positionen||[]).map(d=>{
+        const t=[]; if(d.verkauft) t.push(`${d.verkauft}× ${esc(d.name)} verkauft`);
+        if(d.retour) t.push(`${d.retour}× ${esc(d.name)} retour`);
+        return t.join(', ');
+      }).filter(Boolean).join(' · ');
+      return `<div class="muted" style="font-size:.85rem">↳ ${fmtZeit(v.ts)}: ${teile}${v.betrag?` – <b>${fmtEur(v.betrag)} abgeliefert (${v.zahlungsart==='bar'?'bar':'Karte'})</b>`:''}</div>`;
+    }).join('');
+    return `<div class="card" style="${k.status!=='offen'?'opacity:.6':''}">
+      <div class="row">
+        <div class="grow"><h3>${esc(m?m.name:'?')} ${k.status==='offen'?`<span class="badge b-lila">${offenGes} offen</span>`:'<span class="badge b-gruen">abgerechnet</span>'}</h3>
+          <p class="muted">${esc(ev?ev.name:'')} · ausgegeben am ${fmtDat(k.ts)}${k.notiz?' · '+esc(k.notiz):''}</p></div>
+        ${k.status==='offen'?`<button class="btn-p" onclick="kommAbrechnenDialog('${k.id}')">💶 Abrechnen</button>`:''}
+      </div>
+      <p>${op.map(p=>`${p.offen}× ${esc(p.name)} à ${fmtEur(p.preis)}${p.seatsOffen.length?` <span class="muted">(${p.seatsOffen.join(', ')})</span>`:''}`).join(' · ')||'alles abgerechnet'}
+        ${offenGes?`<br>Offener Warenwert: <b>${fmtEur(kommOffenWert(k))}</b>`:''}</p>
+      ${historie}
+    </div>`;
+  }).join('') : '<p class="muted">Noch keine Kommissionen. Ausgabe über die Kasse: Karten in den Warenkorb legen → „Als Kommission".</p>';
+}
+
+/* --------- Abrechnung (Teilschritte) --------- */
+let abrSeats={};   // {'R1-P2':'verkauft'|'retour'} nur für aktuelle Abrechnung
+function kommAbrechnenDialog(id){
+  const k=state.kommissionen.find(x=>x.id===id); if(!k||k.status!=='offen') return;
+  const m=mitgliedVon(k.mitglied_id);
+  abrSeats={};
+  const op=kommOffenPos(k).filter(p=>p.offen>0);
+  modal(`<h2>Abrechnung – ${esc(m?m.name:'')}</h2>
+    <p class="muted">Plätze antippen: 1× = <b style="color:var(--gruen)">verkauft</b>, 2× = <b style="color:var(--gelb)">retour</b>, 3× = bleibt offen.
+    Bei Karten ohne Sitzplatz Stückzahlen eintragen. Es muss nicht alles auf einmal abgerechnet werden.</p>
+    ${op.map((p,i)=>`<div class="card">
+      <b>${esc(p.name)}</b> à ${fmtEur(p.preis)} – ${p.offen} offen
+      ${p.seatsOffen.length? `<div>${p.seatsOffen.map(s=>`<button class="chip" id="chip_${s}" onclick="abrChip('${s}')">${s}</button>`).join('')}</div>`
+      : `<div class="row" style="margin-top:8px">
+          <div><label>verkauft</label><input type="number" id="abrV${i}" min="0" max="${p.offen}" value="0" style="width:110px" oninput="abrSumme('${id}')"></div>
+          <div><label>retour</label><input type="number" id="abrR${i}" min="0" max="${p.offen}" value="0" style="width:110px" oninput="abrSumme('${id}')"></div>
+        </div>`}
+    </div>`).join('')}
+    <div class="row"><div class="grow"><label>Zahlungsart (für verkaufte Karten)</label>
+      <select id="abrZahlart" style="width:100%"><option value="bar">Bar</option><option value="karte">Karte/Überweisung</option></select></div>
+      <div style="text-align:right"><label>abzuliefern</label><div id="abrBetrag" style="font-size:1.6rem;font-weight:800">0,00 €</div></div></div>
+    <div class="row" style="margin-top:14px">
+      <button class="btn-o" onclick="modalZu()">Abbrechen</button>
+      <button class="btn-g grow" onclick="kommAbrechnen('${id}')">✓ Abrechnung buchen</button></div>`,true);
+}
+function abrChip(s){
+  const st=abrSeats[s];
+  abrSeats[s]= st==null?'verkauft' : st==='verkauft'?'retour' : null;
+  if(abrSeats[s]==null) delete abrSeats[s];
+  const c=document.getElementById('chip_'+s);
+  c.className='chip'+(abrSeats[s]?' '+abrSeats[s]:'');
+  const kid=document.querySelector('#modal .btn-g').getAttribute('onclick').match(/'([^']+)'/)[1];
+  abrSumme(kid);
+}
+function abrDaten(k){
+  const op=kommOffenPos(k).filter(p=>p.offen>0);
+  return op.map((p,i)=>{
+    if(p.seatsOffen.length){
+      const sv=p.seatsOffen.filter(s=>abrSeats[s]==='verkauft');
+      const sr=p.seatsOffen.filter(s=>abrSeats[s]==='retour');
+      return {katId:p.katId,name:p.name,preis:p.preis, verkauft:sv.length, retour:sr.length, seatsVerkauft:sv, seatsRetour:sr};
+    }
+    const v=parseInt(document.getElementById('abrV'+i)?.value,10)||0;
+    const r=parseInt(document.getElementById('abrR'+i)?.value,10)||0;
+    return {katId:p.katId,name:p.name,preis:p.preis, verkauft:Math.min(v,p.offen), retour:Math.min(r,p.offen-Math.min(v,p.offen)), seatsVerkauft:[], seatsRetour:[]};
+  });
+}
+function abrSumme(id){
+  const k=state.kommissionen.find(x=>x.id===id); if(!k) return 0;
+  const betrag=abrDaten(k).reduce((s,d)=>s+d.verkauft*d.preis,0);
+  const el=document.getElementById('abrBetrag'); if(el) el.textContent=fmtEur(betrag);
+  return betrag;
+}
+function kommAbrechnen(id, testDaten, testZahlart){
+  const k=state.kommissionen.find(x=>x.id===id); if(!k||k.status!=='offen') return;
+  const daten=(testDaten||abrDaten(k)).filter(d=>d.verkauft>0||d.retour>0);
+  if(!daten.length){ alert('Nichts ausgewählt – Plätze antippen bzw. Stückzahlen eintragen.'); return; }
+  const zahlart=testZahlart||document.getElementById('abrZahlart').value;
+  const betrag=daten.reduce((s,d)=>s+d.verkauft*d.preis,0);
+  const m=mitgliedVon(k.mitglied_id);
+  let buchungId=null;
+  if(daten.some(d=>d.verkauft>0)){
+    const b={id:uid(), belegnr:belegNrNeu(), event_id:k.event_id, status:'bezahlt', zahlungsart:zahlart,
+      summe:betrag, gegeben:null, rueckgeld:null, kunde:(m?m.name:'')+' (Kommission)',
+      mitglied_id:k.mitglied_id, kommission:k.id, storno_grund:null, ts:nowISO(),
+      positionen:daten.filter(d=>d.verkauft>0).map(d=>({katId:d.katId,name:d.name,preis:d.preis,menge:d.verkauft,seats:d.seatsVerkauft}))};
+    upsertLokal('buchungen',b); buchungId=b.id;
+    seatsUmhaengen(k.id, b.id, daten.flatMap(d=>d.seatsVerkauft));
+  }
+  seatsEinzelnFreigeben(k.id, daten.flatMap(d=>d.seatsRetour));
+  k.vorgaenge=k.vorgaenge||[];
+  k.vorgaenge.push({ts:nowISO(), betrag, zahlungsart:betrag?zahlart:null, buchung_id:buchungId,
+    positionen:daten.map(d=>({katId:d.katId,name:d.name,verkauft:d.verkauft,retour:d.retour,seatsVerkauft:d.seatsVerkauft,seatsRetour:d.seatsRetour}))});
+  if(kommOffenPos(k).every(p=>p.offen===0)) k.status='abgerechnet';
+  upsertLokal('kommissionen',k);
+  modalZu(); renderAlles();
+  if(buchungId) belegAnzeigen(state.buchungen.find(b=>b.id===buchungId));
+}
+/* Server-Sitzsperren einzeln umhängen / freigeben */
+async function seatsUmhaengen(refAlt,refNeu,plaetze){
+  if(!plaetze.length||!supaAktiv()||!navigator.onLine) return;
+  try{ await supaFetch(`seats?ref_id=eq.${refAlt}&platz=in.(${plaetze.join(',')})`,
+    {method:'PATCH',body:JSON.stringify({ref_id:refNeu,art:'verkauf',updated_at:nowISO()})}); }catch(e){}
+}
+async function seatsEinzelnFreigeben(ref,plaetze){
+  if(!plaetze.length) return;
+  if(!supaAktiv()||!navigator.onLine) return;
+  try{ await supaFetch(`seats?ref_id=eq.${ref}&platz=in.(${plaetze.join(',')})`,{method:'DELETE'}); }catch(e){}
+}
+
 /* ======================= KUNDEN ======================= */
 function renderKunden(){
   const t=document.getElementById('kundenTabelle');
@@ -1077,7 +1331,7 @@ function renderDash(){
   for(const e of evs){
     const z=freiZaehlung(e);
     const kap=(z.gesamtSitze+z.kontFrei)||1;
-    const v=z.verkauft+z.sitzV, r=z.reserviert+z.sitzR, frei=kap-v-r;
+    const v=z.verkauft+z.sitzV, r=z.reserviert+z.sitzR, ko=z.kommF+z.sitzK, frei=kap-v-r-ko;
     let umsatz=0; const proKat={};
     for(const b of aktiveB()) if(b.event_id===e.id){ umsatz+=b.summe;
       for(const p of b.positionen){ proKat[p.name]=(proKat[p.name]||0)+p.menge; } }
@@ -1085,8 +1339,9 @@ function renderDash(){
       <div class="balken">
         <i style="width:${v/kap*100}%;background:var(--rot)"></i>
         <i style="width:${r/kap*100}%;background:var(--gelb)"></i>
+        <i style="width:${ko/kap*100}%;background:#7c3aed"></i>
         <i style="width:${frei/kap*100}%;background:var(--gruen)"></i></div>
-      <p class="muted">🔴 ${v} verkauft · 🟡 ${r} reserviert · 🟢 ${frei} frei · Auslastung ${Math.round((v+r)/kap*100)} %</p>
+      <p class="muted">🔴 ${v} verkauft · 🟡 ${r} reserviert · 🟣 ${ko} Kommission · 🟢 ${frei} frei · Auslastung ${Math.round((v+r+ko)/kap*100)} %</p>
       <div class="kpi">${fmtEur(umsatz)}</div>
       <p class="muted">${Object.entries(proKat).map(([k,n])=>`${n}× ${esc(k)}`).join(' · ')||'noch keine Verkäufe'}</p></div>`;
   }
@@ -1280,7 +1535,8 @@ function setVereinSpeichern(){
   speichern(); renderAlles(); alert('Gespeichert.');
 }
 async function supaVerbinden(){
-  state.einstellungen.supaUrl=document.getElementById('setSupaUrl').value.trim();
+  state.einstellungen.supaUrl=document.getElementById('setSupaUrl').value.trim()
+    .replace(/\/rest\/v1\/?$/,'').replace(/\/+$/,'');   // toleriert versehentlich mitkopiertes /rest/v1/
   state.einstellungen.supaKey=document.getElementById('setSupaKey').value.trim();
   speichern();
   if(!supaAktiv()){ netzStatus(); alert('Cloud-Felder geleert – App läuft im Lokalbetrieb.'); return; }
@@ -1334,7 +1590,7 @@ laden();
 renderAlles();
 if(supaAktiv()){ pollingStart(); syncPush(); syncPull(); }
 else netzStatus();
-/* v1.0.2 */
+/* v1.1.0 */
 
 </script>
 </body>
