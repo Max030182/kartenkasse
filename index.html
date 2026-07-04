@@ -1269,7 +1269,10 @@ function renderEinstellungen(){
   setzen('setSupaKey',state.einstellungen.supaKey);
   const lb=state.einstellungen.letztesBackup;
   document.getElementById('backupInfo').textContent=lb?('Letztes Backup: '+fmtZeit(lb)):'Noch kein Backup erstellt.';
-  document.getElementById('supaStatus').textContent=supaAktiv()?'✓ konfiguriert':'nicht konfiguriert (Lokalbetrieb)';
+  const st=document.getElementById('supaStatus');
+  if(!supaAktiv()) st.textContent='nicht konfiguriert (Lokalbetrieb)';
+  else if(!navigator.onLine||syncFehler) st.textContent='⚠️ konfiguriert, aber keine Verbindung – Änderungen werden lokal gepuffert';
+  else st.textContent='✓ verbunden'+(state.outbox.length?` – ${state.outbox.length} Änderung(en) werden übertragen…`:' & synchron');
 }
 function setVereinSpeichern(){
   state.einstellungen.verein=document.getElementById('setVerein').value.trim()||'Mein Verein';
@@ -1331,7 +1334,7 @@ laden();
 renderAlles();
 if(supaAktiv()){ pollingStart(); syncPush(); syncPull(); }
 else netzStatus();
-/* v1.0.1 */
+/* v1.0.2 */
 
 </script>
 </body>
