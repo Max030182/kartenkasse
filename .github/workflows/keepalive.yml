@@ -1,0 +1,43 @@
+name: Supabase wachhalten
+
+on:
+  schedule:
+    - cron: '17 6 * * 1,4'   # Montag & Donnerstag, 06:17 UTC
+  workflow_dispatch:          # manueller Start über den Actions-Reiter
+
+permissions:
+  contents: write
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Datenbank anpingen (setzt Inaktivitäts-Zähler zurück)
+        run: |
+          code=$(curl -s -o /dev/null -w "%{http_code}" \
+            "${{ secrets.SUPABASE_URL }}/rest/v1/events?select=id&limit=1" \
+            -H "apikey: ${{ secrets.SUPABASE_KEY }}" \
+            -H "Authorization: Bearer ${{ secrets.SUPABASE_KEY }}")
+          echo "Antwort: HTTP $code"
+          if [ "$code" != "200" ]; then
+            echo "::error::Supabase antwortet nicht mit 200 – Projekt prüfen!"
+            exit 1
+          fi
+
+      - name: Repo-Aktivität erhalten (alle ~6 Wochen ein Mini-Commit)
+        run: |
+          git clone --depth 1 "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}.git" repo
+          cd repo
+          letzte=$(git log -1 --format=%ct)
+          jetzt=$(date +%s)
+          if [ $((jetzt - letzte)) -gt 3628800 ]; then
+            date > .keepalive
+            git config user.name "keepalive-bot"
+            git config user.email "actions@github.com"
+            git add .keepalive
+            git commit -m "Keepalive: Zeitplan aktiv halten"
+            git push
+            echo "Mini-Commit erstellt."
+          else
+            echo "Repo ist aktiv genug – kein Commit nötig."
+          fi
